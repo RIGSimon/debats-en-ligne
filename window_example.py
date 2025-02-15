@@ -82,9 +82,23 @@ def main() :
                    fg="black",
                    width=25,
                    height=5)
+    
+    results_button = tk.Button(main_window, 
+                   text="Voir les résultats",
+                   activebackground="blue", 
+                   activeforeground="white",
+                   anchor="center",
+                   bd=3,
+                   bg="lightgray",
+                   cursor="hand2",
+                   disabledforeground="gray",
+                   fg="black",
+                   width=25,
+                   height=5)
 
     load_debate_button.pack()
     start_sequence_button.pack()
+    results_button.pack()
 
 
     main_window.mainloop()
