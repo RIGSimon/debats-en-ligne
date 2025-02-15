@@ -18,7 +18,7 @@ L'idée est donc de développer une méthode d'analyse plus précise en remplaç
 
 Le principal objectif du projet est de créer une application permettant de charger des débats sous forme de graphes d'arguments et de faire des comparaisons pair-à-pair entre ces arguments.  
 L'application proposera deux arguments à comparer et permettra aux utilisateurs de choisir celui qu'ils jugent le plus convaincant. Ce processus sera répété pour affiner les résultats.  
-L'application devra enregistrer les réponses des utilisateurs et permettre une analyse des résultats afin de tirer des conclusions sur la manière dont les différents arguments soutiennent ou attaquent la question principale du débat.  
+Elle devra aussi enregistrer les réponses des utilisateurs et permettre une analyse des résultats afin de tirer des conclusions sur la manière dont les différents arguments soutiennent ou attaquent la question principale du débat.  
   
   
 ## Fonctionnalités
@@ -36,7 +36,7 @@ Une fois le débat chargé, l'utilisateur pourra initier une séquence de questi
 Chaque utilisateur devra répondre à plusieurs comparaisons successives, permettant ainsi d'établir une hiérarchie des arguments en fonction de leur pouvoir de persuasion.  
 Il sera également envisageable d'ajouter un module de retour utilisateur pour comprendre les motivations de leurs choix.
 
-### Enregistrement et gestion des Votes
+### Enregistrement et gestion des votes
 
 Les utilisateurs devront se connecter via un identifiant afin de garantir la traçabilité des réponses. Chaque vote sera enregistré et associé à un utilisateur pour permettre une analyse approfondie des préférences et tendances argumentatives. Le système devra permettre l'accumulation des votes et leur récupération pour une exploitation ultérieure.  
 Pour favoriser l'engagement, une représentation visuelle des tendances argumentatives pourra être intégrée, permettant aux participants de situer leurs choix par rapport à l'ensemble des réponses collectées.
