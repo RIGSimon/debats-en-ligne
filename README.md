@@ -28,13 +28,13 @@ L'interface du prototype sera organisée en trois principaux modules :
 ### Chargement d'un débat et lancement de la séquence de questions
 
 Le système devra être capable d'importer un débat au format JSON, préalablement structuré et extrait de Kialo. Cette base de données servira de support pour toutes les interactions et analyses menées par l'application.  
-[Les métadonnées associées aux arguments (popularité, niveau de support, critiques) pourront également être prises en compte pour enrichir les comparaisons.]  
+Les métadonnées associées aux arguments pourront également être prises en compte pour enrichir les comparaisons.  
 Une fois le débat chargé, l'utilisateur pourra initier une séquence de questions permettant d'évaluer les arguments de manière comparative. Plusieurs stratégies seront mises en place pour poser ces questions :
 - Présenter deux arguments en faveur d'une même position et demander lequel est le plus convaincant.
 - Comparer deux arguments opposés (un pour et un contre) afin de mieux cerner l'impact des points de vue divergents.
 
 Chaque utilisateur devra répondre à plusieurs comparaisons successives, permettant ainsi d'établir une hiérarchie des arguments en fonction de leur pouvoir de persuasion.  
-Il sera également envisageable d'ajouter un module de retour utilisateur pour comprendre les motivations de leurs choix.
+Il sera également envisageable d'ajouter un module de retour utilisateur pour recueillir leur feedback sur un argument, ainsi qu'un module permettant de remonter dans l'arborescence des arguments s'ils souhaitent connaître le contexte de l'argument courant.
 
 ### Enregistrement et gestion des votes
 
@@ -47,4 +47,4 @@ Une fois les votes collectés, un module d'analyse proposera plusieurs axes d'in
 - Étudier la répartition des préférences et mettre en évidence les arguments les plus convaincants.
 - Évaluer dans quelle mesure la question principale du débat est soutenue ou contestée.
   
-[On pourra explorer différentes méthodologies pour quantifier l'impact des comparaisons par paires par rapport aux méthodes traditionnelles de pondération des arguments.]
+On pourra explorer différentes méthodologies pour quantifier l'impact des comparaisons par paires par rapport aux méthodes traditionnelles de pondération des arguments.
