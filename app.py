@@ -205,7 +205,7 @@ def launch_login_window(root):
         if username and password: # Tout est valide sauf la chaine vide (a changer)
             with open('user_db.json', 'r') as file :
                 user_db = json.load(file)
-                print(user_db)
+                #print(user_db)
             if username in user_db.keys() and user_db[username] == password :
                 login_root.destroy()
                 root.destroy()
