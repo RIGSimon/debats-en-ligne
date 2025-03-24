@@ -1,3 +1,4 @@
+import json
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from graph import DebateGraph
@@ -200,10 +201,18 @@ def launch_login_window(root):
         username = username_entry.get()
         password = password_entry.get()
 
+        #Vérification du login dans user_db.json
         if username and password: # Tout est valide sauf la chaine vide (a changer)
-            login_root.destroy()
-            root.destroy()
-            launch_main_window()
+            with open('user_db.json', 'r') as file :
+                user_db = json.load(file)
+                print(user_db)
+            if username in user_db.keys() and user_db[username] == password :
+                login_root.destroy()
+                root.destroy()
+                launch_main_window()
+            else :
+                messagebox.showerror("Erreur", "Nom d'utilisateur/Mot de passe incorrect")
+            
         else:
             messagebox.showerror("Erreur", "Veuillez remplir tous les champs.")
     
@@ -240,9 +249,20 @@ def launch_register_window(root):
         repassword = repassword_entry.get()
 
         if username and password and repassword and (password == repassword): # Tout est valide sauf la chaine vide (a changer)
-            login_root.destroy()
-            root.destroy()
-            launch_main_window()
+            with open('user_db.json', 'r') as f1:
+                log_dict = json.load(f1)
+            #Vérification du nom d'utilisateur disponible (mais possible d'avoir le même password qu'un autre utilisateur)
+            if username not in log_dict.keys() :
+                log_dict[username] = password
+                with open('user_db.json', 'w') as f2:
+                    json.dump(log_dict, f2)
+                login_root.destroy()
+                root.destroy()
+            
+
+                launch_main_window()
+            else : 
+                messagebox.showerror("Erreur", "Ce nom d'utilisateur n'est pas disponible")
 
         else:
             if password != repassword:
