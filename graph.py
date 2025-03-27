@@ -2,6 +2,7 @@ import json
 import networkx as nx
 import matplotlib.pyplot as plt
 from collections import deque
+import random
 
 
 class DebateGraph:
@@ -17,8 +18,8 @@ class DebateGraph:
         self.G.graph["graph"] = {"rankdir": "TB"}
 
         # Add nodes to the graph
-        for node_id in self.nodes:
-            self.G.add_node(node_id, text=self.nodes[node_id]["text"])
+        for node_id, node_data in self.nodes.items():
+            self.G.add_node(node_id, **node_data)
         
         # Root node
         self.root = [n for n in self.nodes if self.G.in_degree(n) == 0][0]
@@ -28,7 +29,7 @@ class DebateGraph:
         for edge_id, edge_data in self.edges.items():
             parent_id = edge_data["successor_id"]
             child_id = edge_id
-            self.G.add_edge(parent_id, child_id)
+            self.G.add_edge(parent_id, child_id, **edge_data)
 
             # Edge colors : 1 pour / -1 contre
             relation = edge_data["relation"]
@@ -36,9 +37,14 @@ class DebateGraph:
                 self.edge_colors.append("green")
             elif relation == -1:
                 self.edge_colors.append("red")
+            else:
+                self.edge_colors.append("black")
 
         # BFS
-        self.main_arg, self.order = BFS_order(self.G, self.root)
+        # self.main_arg, self.order = BFS_order(self.G, self.root)
+
+        # Random
+        self.main_arg, self.order = random_order(self.G, self.root, 10)
 
 
     def extract_limited_tree(self, graph, root, max_depth, current_depth=0, limited_tree=None):
@@ -102,6 +108,27 @@ def BFS_order(graph, root):
         for successor in graph.successors(node):
             queue.append(successor)
 
+
+    return root_succ, order
+
+
+def random_order(graph, root, nb):
+    """
+    Parcours random pour établir l'ordre des comparaisons
+    Renvoie l'id de la question principale et l'ordre des noeuds à parcourir
+    """
+
+    root_succ, list = BFS_order(graph, root)
+    order = []
+
+    n = len(list)
+    nb_elem = n
+
+    for _ in range (nb * 2):
+        i = random.randint(0, nb_elem-1)
+        nb_elem = nb_elem - 1
+        order.append(list[i])
+        list.pop(i)
 
     return root_succ, order
 

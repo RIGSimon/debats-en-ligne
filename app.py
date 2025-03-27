@@ -203,7 +203,7 @@ def launch_login_window(root):
 
         #Vérification du login dans user_db.json
         if username and password: # Tout est valide sauf la chaine vide (a changer)
-            with open('user_db.json', 'r') as file :
+            with open("user_db.json", 'r') as file :
                 user_db = json.load(file)
                 #print(user_db)
             if username in user_db.keys() and user_db[username] == password :
@@ -259,7 +259,6 @@ def launch_register_window(root):
                 login_root.destroy()
                 root.destroy()
             
-
                 launch_main_window()
             else : 
                 messagebox.showerror("Erreur", "Ce nom d'utilisateur n'est pas disponible")
