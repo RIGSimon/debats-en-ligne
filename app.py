@@ -9,6 +9,7 @@ class DebateApp:
         self.root = root
         self.root.title("Comparaison d'arguments")
         self.root.geometry("600x500") 
+        self.score = 0
 
         graph = DebateGraph(filename)
 
@@ -22,8 +23,8 @@ class DebateApp:
         self.label.pack(pady=10)
         
         self.arg1_button = tk.Button(self.root, 
-                                     text="", 
-                                     command=lambda: self.next_step(None), 
+                                     text="",  
+                                     command=lambda: self.next_step(None),
                                      wraplength=500, 
                                      justify="left")
         self.arg2_button = tk.Button(self.root, 
@@ -52,6 +53,20 @@ class DebateApp:
         self.next_step(None)  # Afficher la première paire
     
 
+    def update_score(self, node) :
+        cur_node = node
+        prev_node = list(self.graph.predecessors(cur_node))[0]
+        score = 1
+        done = False
+        while not done :
+            if int(self.graph.get_edge_data(prev_node, cur_node)["relation"]) == 0.0 :
+                done = True
+                break
+            score = score * int(self.graph.get_edge_data(prev_node, cur_node)["relation"])
+            cur_node = list(self.graph.predecessors(cur_node))[0]
+            prev_node = list(self.graph.predecessors(prev_node))[0]
+        self.score += score
+
     def next_step(self, choice):
         """
         Passe à la paire suivante d'arguments
@@ -62,14 +77,22 @@ class DebateApp:
             self.arg1_button.pack_forget()
             self.arg2_button.pack_forget()
             self.unable_button.pack_forget()
+            arg_button = tk.Button(self.root, 
+                                     text="Analyse des résultats",  
+                                     command=lambda: analyse_window(self.score),
+                                     wraplength=500, 
+                                     justify="left")
+            arg_button.pack(pady=5, expand=True)
+            
             return
         
         if choice == None:
             node1 = self.order[self.index]
             node2 = self.order[self.index + 1]
             
-            self.arg1_button.config(text=self.graph.nodes[node1].get("text", node1))
-            self.arg2_button.config(text=self.graph.nodes[node2].get("text", node2))
+            
+            self.arg1_button.config(text=self.graph.nodes[node1].get("text", node1), command=lambda: [self.next_step(None), self.update_score(node1)])
+            self.arg2_button.config(text=self.graph.nodes[node2].get("text", node2), command=lambda: [self.next_step(None), self.update_score(node2)])
             
             self.index += 2  # Passer à la prochaine paire
         
@@ -82,6 +105,19 @@ class DebateApp:
                 self.arg2_button.config(text=self.graph.nodes[node2].get("text", node2))
                 
                 self.index -= 2
+
+def analyse_window(score) :
+    root = tk.Tk()
+    root.title("Résultats")
+
+    if score >= 1 :
+        label = tk.Label(root, text="Vous êtes en faveur de l'argument principal !")
+        label.pack(padx=10, pady=10)
+    else :
+        label = tk.Label(root, text="Vous êtes opposé à l'argument principal !")
+        label.pack(padx=10, pady=0)
+    root.mainloop()
+    return
 
 
 def launch_home_window():
@@ -203,7 +239,7 @@ def launch_login_window(root):
 
         #Vérification du login dans user_db.json
         if username and password: # Tout est valide sauf la chaine vide (a changer)
-            with open("user_db.json", 'r') as file :
+            with open('user_db.json', 'r') as file :
                 user_db = json.load(file)
                 #print(user_db)
             if username in user_db.keys() and user_db[username] == password :
@@ -259,6 +295,7 @@ def launch_register_window(root):
                 login_root.destroy()
                 root.destroy()
             
+
                 launch_main_window()
             else : 
                 messagebox.showerror("Erreur", "Ce nom d'utilisateur n'est pas disponible")
