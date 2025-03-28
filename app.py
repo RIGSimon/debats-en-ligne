@@ -5,13 +5,13 @@ from graph import DebateGraph
 
 
 class DebateApp:
-    def __init__(self, root, filename):
+    def __init__(self, root, filename, nb):
         self.root = root
         self.root.title("Comparaison d'arguments")
         self.root.geometry("600x500") 
         self.score = 0
 
-        graph = DebateGraph(filename)
+        graph = DebateGraph(filename, nb)
 
         self.graph = graph.G.copy()
         self.order = graph.order.copy()
@@ -74,9 +74,12 @@ class DebateApp:
 
         if self.index >= len(self.order) - 1:
             self.label.config(text="Fin du débat")
+            
+            self.back_button.pack_forget()
             self.arg1_button.pack_forget()
             self.arg2_button.pack_forget()
             self.unable_button.pack_forget()
+            
             arg_button = tk.Button(self.root, 
                                      text="Analyse des résultats",  
                                      command=lambda: analyse_window(self.score),
@@ -185,34 +188,66 @@ def launch_selection_window(filename):
     
     label = tk.Label(selection_root, 
                      text="Fichier sélectionné :\n" + filename, 
-                     font=("Arial", 10), wraplength=380, 
+                     font=("Arial", 12), wraplength=380, 
                      justify="center")
     label.pack(pady=10)
+
+    # Pour le choix du nombre de questions
+    graph = DebateGraph(filename, -1) # on récupère tout
+
+    order_length = len(graph.order)
+    nb_comp_tot = int(order_length/2)
+
+    options = [i for i in range(10, nb_comp_tot + 1, 20)]  # multiple de 20
+    options.append(nb_comp_tot)
+
+    selected_num_questions = tk.IntVar(selection_root)
+    selected_num_questions.set(options[-1]) # par défaut, tout
+
+    titre = tk.Label(selection_root, 
+                     text="Sélectionner le nombre de questions", 
+                     font=("Arial", 14), wraplength=380, 
+                     justify="center")
+    titre.pack(pady=10)
+
+    num_questions_menu = tk.OptionMenu(selection_root, 
+                                       selected_num_questions,
+                                       *options,
+                                       command=lambda event: get_selection(selection_root, selected_num_questions, filename))
+        
+    num_questions_menu.pack(pady=10)
     
-    start_button = tk.Button(selection_root, 
-                             text="Lancer le débat", 
-                             command=lambda: launch_debate_window(selection_root, filename), 
-                             width=20, 
-                             height=2)
-    start_button.pack(pady=10)
-    
-    results_button = tk.Button(selection_root, 
-                               text="Voir les résultats", 
-                               width=20, 
-                               height=2)
-    results_button.pack(pady=10)
-    
+    # results_button = tk.Button(selection_root, 
+    #                            text="Voir les résultats", 
+    #                            width=20, 
+    #                            height=2)
+    # results_button.pack(pady=10)
+
+
     selection_root.mainloop()
 
+def get_selection(selection_root, selected_num_questions, filename):
+        """
+        Fonction appelée lorsque l'utilisateur sélectionne une option
+        """
+        nb_comparaisons = selected_num_questions.get()
 
-def launch_debate_window(selection_root, filename):
+        start_button = tk.Button(selection_root, 
+                                text="Lancer le débat", 
+                                command=lambda: launch_debate_window(selection_root, filename, nb_comparaisons),
+                                width=20, 
+                                height=2)
+        start_button.pack(pady=10)
+
+
+def launch_debate_window(selection_root, filename, nb):
     """
     Page de lancement du debat
     """
 
     selection_root.destroy()
     debate_root = tk.Tk()
-    app = DebateApp(debate_root, filename)
+    app = DebateApp(debate_root, filename, nb)
     debate_root.mainloop()
 
 

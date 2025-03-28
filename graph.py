@@ -6,7 +6,7 @@ import random
 
 
 class DebateGraph:
-    def __init__(self, filename):
+    def __init__(self, filename, nb):
 
         with open(filename, 'r') as file:
             data = json.load(file)
@@ -44,7 +44,7 @@ class DebateGraph:
         # self.main_arg, self.order = BFS_order(self.G, self.root)
 
         # Random
-        self.main_arg, self.order = random_order(self.G, self.root, 10)
+        self.main_arg, self.order = random_order(self.G, self.root, nb)
 
 
     def extract_limited_tree(self, graph, root, max_depth, current_depth=0, limited_tree=None):
@@ -123,8 +123,12 @@ def random_order(graph, root, nb):
 
     n = len(list)
     nb_elem = n
+    nb_comp = nb * 2
 
-    for _ in range (nb * 2):
+    if (nb == -1):
+        nb_comp = n
+
+    for _ in range (nb_comp):
         i = random.randint(0, nb_elem-1)
         nb_elem = nb_elem - 1
         order.append(list[i])
