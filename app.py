@@ -19,7 +19,7 @@ class DebateApp:
         # Add settings menu
         menubar = tk.Menu(root)
         settings_menu = tk.Menu(menubar, tearoff=0)
-        self.show_node_info = tk.BooleanVar(value=False)  
+        self.show_node_info = tk.BooleanVar(value=True)  
         settings_menu.add_checkbutton(label="Afficher les infos des nœuds", 
                             variable=self.show_node_info, 
                             command=self.toggle_node_info)
@@ -27,9 +27,9 @@ class DebateApp:
         root.config(menu=menubar)
         
         self.label = tk.Label(self.root, 
-                            text=self._format_node_text(graph.main_arg, graph.nodes[graph.main_arg].get("text", graph.main_arg)), 
+                            text="Choisissez l'argument le plus convaincant", 
                             font=("Arial", 14))
-        self.label.pack(pady=10)
+        self.label.pack(pady=10, fill="both", expand=True)
         
         
         self.arg1_button = tk.Button(self.root, 
@@ -55,9 +55,20 @@ class DebateApp:
                                     height=2) 
         self.back_button.place(x=10, y=10)
 
+        self.show = False #par defaut
+        self;show_label = None
+        self.show_button = tk.Button(self.root,
+                                     text="?",
+                                     command=lambda:self.show_main_arg(graph),
+                                     width=2,
+                                     height=2)
+        
+
+
         self.arg1_button.pack(pady=5, fill="both", expand=True)
         self.arg2_button.pack(pady=5, fill="both", expand=True)
         self.unable_button.pack(pady=10)
+        self.show_button.pack(side=tk.LEFT)
         
         self.next_step(None)  # Afficher la première paire
     
@@ -101,12 +112,13 @@ class DebateApp:
         print('refresh', self.index)
         """Refresh all displayed text and colors with current settings"""
         # Refresh main argument
+        """
         main_arg = self.order[0] if self.order else ""
         if main_arg in self.graph.nodes:
             self.label.config(text=self._format_node_text(
                 main_arg, 
                 self.graph.nodes[main_arg].get("text", main_arg)
-            ))
+            ))"""
         
         # Refresh current buttons
         if self.index < len(self.order) - 1:
@@ -121,6 +133,17 @@ class DebateApp:
             self._set_button_colors(self.arg2_button, node2)
 
 
+    def show_main_arg(self, graph) :
+        self.show = not self.show
+
+        if (self.show):
+            self.show_label = tk.Label(self.root,
+                                       text = self._format_node_text(graph.main_arg, graph.nodes[graph.main_arg].get("text", graph.main_arg)),
+                                       font=("Arial", 14))
+            self.show_label.pack(pady=10, fill="both", expand=True)
+        
+        else:
+            self.show_label.destroy()
 
     def update_score(self, node):
         cur_node = node
