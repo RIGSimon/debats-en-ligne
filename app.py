@@ -3,6 +3,13 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from graph import DebateGraph
 
+import os
+if (os.name == "posix"):
+    import tkmacosx as tkmac
+
+
+myUsername = None
+
 class DebateApp:
     def __init__(self, root, filename, nb, strategy="random"):
         self.root = root
@@ -10,16 +17,18 @@ class DebateApp:
         self.root.geometry("600x500") 
         self.score = 0
 
+        self.username = None
+
         graph = DebateGraph(filename, nb, strategy)
 
         self.graph = graph.G.copy()
         self.order = graph.order.copy()
         self.index = -2
-        
+
         # Add settings menu
         menubar = tk.Menu(root)
         settings_menu = tk.Menu(menubar, tearoff=0)
-        self.show_node_info = tk.BooleanVar(value=False)  
+        self.show_node_info = tk.BooleanVar(value=True)  
         settings_menu.add_checkbutton(label="Afficher les infos des nœuds", 
                             variable=self.show_node_info, 
                             command=self.toggle_node_info)
@@ -27,21 +36,36 @@ class DebateApp:
         root.config(menu=menubar)
         
         self.label = tk.Label(self.root, 
-                            text=self._format_node_text(graph.main_arg, graph.nodes[graph.main_arg].get("text", graph.main_arg)), 
+                            text="Choisissez l'argument le plus convaincant", 
                             font=("Arial", 14))
-        self.label.pack(pady=10)
+        self.label.pack(pady=10, fill="both", expand=True)
         
-        
-        self.arg1_button = tk.Button(self.root, 
+        if os.name == "posix":
+            self.arg1_button = tkmac.Button(self.root, 
                                     text="",  
                                     command=lambda: self.next_step(None),
-                                    wraplength=500, 
                                     justify="left")
-        self.arg2_button = tk.Button(self.root, 
+            self.arg2_button = tkmac.Button(self.root, 
                                     text="", 
                                     command=lambda: self.next_step(None), 
-                                    wraplength=500, 
                                     justify="left")
+        
+            
+        else:
+            self.arg1_button = tk.Button(self.root, 
+                                    text="",  
+                                    command=lambda: self.next_step(None),
+                                    wraplength=500,
+                                    justify="left")
+            self.arg2_button = tk.Button(self.root, 
+                                    text="", 
+                                    command=lambda: self.next_step(None), 
+                                    wraplength=500,
+                                    justify="left")
+
+
+        
+        
         self.unable_button = tk.Button(self.root, 
                                     text="Je ne peux pas décider", 
                                     command=lambda: self.next_step(None), 
@@ -55,9 +79,26 @@ class DebateApp:
                                     height=2) 
         self.back_button.place(x=10, y=10)
 
+        self.show = False # par defaut
+        self.show_label = None
+
+        self.show_button = tk.Button(self.root, 
+                                    text="?",
+                                    command=lambda: self.show_main_arg(graph), 
+                                    width=2, 
+                                    height=2)
+        
+        self.set_feedback = tk.Button(self.root, 
+                                    text="Feedback",
+                                    command=lambda: self.ask_feedback(self.root), 
+                                    width=10, 
+                                    height=2)
+
         self.arg1_button.pack(pady=5, fill="both", expand=True)
         self.arg2_button.pack(pady=5, fill="both", expand=True)
         self.unable_button.pack(pady=10)
+        self.show_button.pack(side=tk.LEFT)
+        self.set_feedback.pack()
         
         self.next_step(None)  # Afficher la première paire
     
@@ -85,7 +126,7 @@ class DebateApp:
                 elif relation == -1:
                     button.config(bg='#f8d7da')  # Light red
                 else:
-                    button.config(bg="light grey")
+                    button.config(bg='#d3d3d3')
                 
     def toggle_node_info(self):
         """Toggle node info display setting"""
@@ -95,19 +136,23 @@ class DebateApp:
         else: 
             self.show_node_info.set(False)  
         print(f"Toggle node info - New value: {val}")  # Debug
-        self._refresh_display()
+        self._refresh_display(None)
     
-    def _refresh_display(self):
+    def _refresh_display(self, feedback):
+        global myUsername
+
         print('refresh', self.index)
         """Refresh all displayed text and colors with current settings"""
         # Refresh main argument
+        """
         main_arg = self.order[0] if self.order else ""
         if main_arg in self.graph.nodes:
             self.label.config(text=self._format_node_text(
                 main_arg, 
                 self.graph.nodes[main_arg].get("text", main_arg)
             ))
-        
+        """
+
         # Refresh current buttons
         if self.index < len(self.order) - 1:
             #index = self.index-2 # (next step adds 2)
@@ -116,10 +161,58 @@ class DebateApp:
             
             self.arg1_button.config(text=self._format_node_text(node1, self.graph.nodes[node1].get("text", node1)))
             self.arg2_button.config(text=self._format_node_text(node2, self.graph.nodes[node2].get("text", node2)))
-            
+
             self._set_button_colors(self.arg1_button, node1)
             self._set_button_colors(self.arg2_button, node2)
 
+            
+            if (feedback != None):
+                if not os.path.exists('feedback_db.json'):
+                    with open('feedback_db.json', 'w') as f2:
+                        f2.write("{}")
+
+                with open('feedback_db.json', 'r') as f1:
+                    feedback_db = json.load(f1)
+
+                    if myUsername in feedback_db.keys():
+                        feedback_db[myUsername].append(str(node1) + ", " + str(node2) + " : " + feedback)
+
+                    else:
+                        feedback_db[myUsername] = [str(node1) + ", " + str(node2) + " : " + feedback]
+
+                    with open('feedback_db.json', 'w') as f2:
+                        json.dump(feedback_db, f2)
+
+
+
+    def show_main_arg(self, graph):
+        self.show = not self.show
+
+        if (self.show):
+            self.show_label = tk.Label(self.root, 
+                            text=self._format_node_text(graph.main_arg, graph.nodes[graph.main_arg].get("text", graph.main_arg)),  
+                            font=("Arial", 14))
+            self.show_label.pack(pady=10, fill="both", expand=True)
+
+        else:
+
+            self.show_label.destroy()
+
+
+    def ask_feedback(self, root):
+        feedback_root = tk.Toplevel(root)
+        feedback_entry = tk.Text(feedback_root, width=100, height=2)
+        feedback_entry.pack(pady=5)
+
+        send_button = tk.Button(root, 
+                           text="Envoyer", 
+                           command=lambda:[self._refresh_display(feedback_entry.get("1.0", tk.END).strip()), self.destroy_windows(feedback_root, send_button)])
+        
+        send_button.pack(pady=10)
+
+    def destroy_windows(self, root, button):
+        root.destroy()
+        button.destroy()
 
 
     def update_score(self, node):
@@ -145,6 +238,7 @@ class DebateApp:
             self.arg1_button.pack_forget()
             self.arg2_button.pack_forget()
             self.unable_button.pack_forget()
+            self.set_feedback.pack_forget()
             
             arg_button = tk.Button(self.root, 
                                 text="Analyse des résultats",  
@@ -156,13 +250,13 @@ class DebateApp:
         
         if choice == None:
             self.index += 2
-            self._refresh_display()
+            self._refresh_display(None)
             
         else:
             if choice >= 0:
                 if self.index >= 2:
                     self.index -= 2
-                    self._refresh_display()
+                    self._refresh_display(None)
                 
                 
 
@@ -302,6 +396,7 @@ def launch_login_window(root):
     password_entry.pack(pady=5)
     
     def validate_login(root):
+        global myUsername
         username = username_entry.get()
         password = password_entry.get()
 
@@ -309,6 +404,7 @@ def launch_login_window(root):
             with open('user_db.json', 'r') as file:
                 user_db = json.load(file)
             if username in user_db.keys() and user_db[username] == password:
+                myUsername = username
                 login_root.destroy()
                 root.destroy()
                 launch_main_window()

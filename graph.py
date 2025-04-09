@@ -158,8 +158,10 @@ def priority_order(graph, root):
             nodes_relation_1.append(node)
         elif edge_data and edge_data.get("relation", 0) == -1:
             nodes_relation_minus1.append(node)
+        """
         else:
             nodes_other.append(node)
+        """
     
     # Interleave the 1 and -1 nodes
     interleaved_nodes = []
