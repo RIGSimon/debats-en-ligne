@@ -79,16 +79,6 @@ class DebateApp:
                                     height=2) 
         self.back_button.place(x=10, y=10)
 
-        self.show = False #par defaut
-        self;show_label = None
-        self.show_button = tk.Button(self.root,
-                                     text="?",
-                                     command=lambda:self.show_main_arg(graph),
-                                     width=2,
-                                     height=2)
-        
-
-
         self.show = False # par defaut
         self.show_label = None
 
@@ -107,6 +97,8 @@ class DebateApp:
         self.arg1_button.pack(pady=5, fill="both", expand=True)
         self.arg2_button.pack(pady=5, fill="both", expand=True)
         self.unable_button.pack(pady=10)
+        self.show_button.pack(side=tk.LEFT)
+        self.set_feedback.pack()
         
         self.next_step(None)  # Afficher la première paire
     
@@ -159,7 +151,8 @@ class DebateApp:
                 main_arg, 
                 self.graph.nodes[main_arg].get("text", main_arg)
             ))
-        
+        """
+
         # Refresh current buttons
         if self.index < len(self.order) - 1:
             #index = self.index-2 # (next step adds 2)
@@ -221,17 +214,6 @@ class DebateApp:
         root.destroy()
         button.destroy()
 
-    def show_main_arg(self, graph) :
-        self.show = not self.show
-
-        if (self.show):
-            self.show_label = tk.Label(self.root,
-                                       text = self._format_node_text(graph.main_arg, graph.nodes[graph.main_arg].get("text", graph.main_arg)),
-                                       font=("Arial", 14))
-            self.show_label.pack(pady=10, fill="both", expand=True)
-        
-        else:
-            self.show_label.destroy()
 
     def update_score(self, node):
         cur_node = node
