@@ -2,6 +2,9 @@ import json
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from graph import DebateGraph
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import numpy as np
 
 import os
 if (os.name == "posix"):
@@ -16,19 +19,22 @@ class DebateApp:
         self.root.title("Comparaison d'arguments")
         self.root.geometry("600x500") 
         self.score = 0
-
+        self.weighted_score = 0
         self.username = None
 
-        graph = DebateGraph(filename, nb, strategy)
+        self.debate_graph = DebateGraph(filename, nb, strategy)
 
-        self.graph = graph.G.copy()
-        self.order = graph.order.copy()
+        self.graph = self.debate_graph.G.copy()
+        self.order = self.debate_graph.order.copy()
         self.index = -2
+
+        self.pour = 0
+        self.contre = 0
 
         # Add settings menu
         menubar = tk.Menu(root)
         settings_menu = tk.Menu(menubar, tearoff=0)
-        self.show_node_info = tk.BooleanVar(value=True)  
+        self.show_node_info = tk.BooleanVar(value=False)  
         settings_menu.add_checkbutton(label="Afficher les infos des nœuds", 
                             variable=self.show_node_info, 
                             command=self.toggle_node_info)
@@ -49,6 +55,23 @@ class DebateApp:
                                     text="", 
                                     command=lambda: self.next_step(None), 
                                     justify="left")
+            
+            """
+            self.arg1_button = tk.Label(self.root,
+                   text="",
+                   wraplength=500,
+                   justify="left",
+                   cursor="hand2")
+            self.arg1_button.bind("<Button-1>", lambda e: self.next_step(None))
+
+            self.arg2_button = tk.Label(self.root,
+                   text="",
+                   wraplength=500,
+                   justify="left",
+                   cursor="hand2")
+            self.arg2_button.bind("<Button-1>", lambda e: self.next_step(None))
+
+            """
         
             
         else:
@@ -64,8 +87,6 @@ class DebateApp:
                                     justify="left")
 
 
-        
-        
         self.unable_button = tk.Button(self.root, 
                                     text="Je ne peux pas décider", 
                                     command=lambda: self.next_step(None), 
@@ -79,12 +100,19 @@ class DebateApp:
                                     height=2) 
         self.back_button.place(x=10, y=10)
 
+        self.context_button = tk.Button(self.root,
+                                    text="Contexte",
+                                    command=lambda: self.choose_arg(), 
+                                    width=5, 
+                                    height=2) 
+        self.context_button.pack(side=tk.TOP, anchor = tk.NE)
+
         self.show = False # par defaut
         self.show_label = None
 
         self.show_button = tk.Button(self.root, 
                                     text="?",
-                                    command=lambda: self.show_main_arg(graph), 
+                                    command=lambda: self.show_main_arg(self.debate_graph), 
                                     width=2, 
                                     height=2)
         
@@ -127,7 +155,7 @@ class DebateApp:
                     button.config(bg='#f8d7da')  # Light red
                 else:
                     button.config(bg='#d3d3d3')
-                
+
     def toggle_node_info(self):
         """Toggle node info display setting"""
         val = self.show_node_info.get()
@@ -159,12 +187,11 @@ class DebateApp:
             node1 = self.order[self.index]
             node2 = self.order[self.index+1]
             
-            self.arg1_button.config(text=self._format_node_text(node1, self.graph.nodes[node1].get("text", node1)))
-            self.arg2_button.config(text=self._format_node_text(node2, self.graph.nodes[node2].get("text", node2)))
+            self.arg1_button.config(text=self._format_node_text(node1, self.graph.nodes[node1].get("text", node1)), command=lambda:[self.next_step(None), self.update_score(node1)])
+            self.arg2_button.config(text=self._format_node_text(node2, self.graph.nodes[node2].get("text", node2)), command=lambda:[self.next_step(None), self.update_score(node2)])
 
             self._set_button_colors(self.arg1_button, node1)
             self._set_button_colors(self.arg2_button, node2)
-
             
             if (feedback != None):
                 if not os.path.exists('feedback_db.json'):
@@ -183,6 +210,52 @@ class DebateApp:
                     with open('feedback_db.json', 'w') as f2:
                         json.dump(feedback_db, f2)
 
+
+    def choose_arg (self):
+        new_window = tk.Tk()
+        new_window.title("Contexte")
+
+        label = tk.Label(new_window, 
+                            text="Pour quel argument voulez-vous le contexte ?", 
+                            font=("Arial", 14))
+        
+        label.pack(pady=10, fill="both", expand=True)
+
+        options = ["1", "2"]
+        selected_option = tk.StringVar(new_window)
+        selected_option.set(options[0])
+
+        option_menu = tk.OptionMenu(new_window, 
+                                    selected_option, 
+                                    *options)
+        option_menu.pack(pady=5)
+
+        send_button = tk.Button(new_window, 
+                           text="Envoyer", 
+                           command=lambda: self.launch_context_window(new_window, selected_option.get()))
+        
+        send_button.pack(pady=10)
+
+    
+    def launch_context_window(self, root, selected_option):
+        root.destroy()
+        new_window = tk.Tk()
+        new_window.title("Contexte de l'argument " + selected_option)
+
+        if selected_option == "1":
+            node = self.order[self.index]
+
+        else:
+            node = self.order[self.index+1]
+
+        pred = list(self.graph.predecessors(node))[0]
+        text = self.graph.nodes[pred].get("text", pred)
+
+        label = tk.Label(new_window, 
+                            text=text, 
+                            font=("Arial", 14))
+        
+        label.pack(pady=10, fill="both", expand=True)
 
 
     def show_main_arg(self, graph):
@@ -218,31 +291,46 @@ class DebateApp:
     def update_score(self, node):
         cur_node = node
         prev_node = list(self.graph.predecessors(cur_node))[0]
-        score = 1
+        buffer_score = 1
         done = False
         while not done:
             if int(self.graph.get_edge_data(prev_node, cur_node)["relation"]) == 0.0:
                 done = True
                 break
-            score = score * int(self.graph.get_edge_data(prev_node, cur_node)["relation"])
+            buffer_score = buffer_score * int(self.graph.get_edge_data(prev_node, cur_node)["relation"])
             cur_node = list(self.graph.predecessors(cur_node))[0]
             prev_node = list(self.graph.predecessors(prev_node))[0]
-        self.score += score
+        
+        if (self.graph.nodes[node].get('level', '?') == 0):
+            self.weighted_score +=  buffer_score
+
+        else:
+            self.weighted_score +=  buffer_score / self.graph.nodes[node].get('level', '?') 
+
+        if (buffer_score == 1):
+            self.pour += buffer_score / self.graph.nodes[node].get('level', '?')
+
+        else:
+            self.contre += buffer_score / self.graph.nodes[node].get('level', '?')*(-1)
+
+        self.score += buffer_score
 
 
     def next_step(self, choice):
         print('next', self.index)
         if self.index >= len(self.order) - 1:
             self.label.config(text="Fin du débat")
-            self.back_button.pack_forget()
+            self.back_button.destroy()
             self.arg1_button.pack_forget()
             self.arg2_button.pack_forget()
             self.unable_button.pack_forget()
             self.set_feedback.pack_forget()
+            self.context_button.pack_forget()
+            self.show_button.pack_forget()
             
             arg_button = tk.Button(self.root, 
                                 text="Analyse des résultats",  
-                                command=lambda: analyse_window(self.score),
+                                command=lambda: analyse_window(self.score, self.weighted_score, self.pour, self.contre, self.root, self.debate_graph.nodes[self.debate_graph.main_arg].get("text", self.debate_graph.main_arg)),
                                 wraplength=500, 
                                 justify="left")
             arg_button.pack(pady=5, expand=True)
@@ -260,15 +348,48 @@ class DebateApp:
                 
                 
 
-def analyse_window(score):
+def analyse_window(score, weighted_score, pour, contre, debate_root, main_arg):
+    debate_root.destroy()
     root = tk.Tk()
     root.title("Résultats")
 
-    if score >= 1:
-        label = tk.Label(root, text="Vous êtes en faveur de l'argument principal !")
+    button = tk.Button(root,
+                        text="Home", 
+                        command=lambda: launch_main_window(root), 
+                        width=3,
+                        height=2)
+
+    button.place(x=10, y=10)
+
+    print(score)
+    print(weighted_score)
+
+    if weighted_score > 0:
+        label = tk.Label(root, text="Vous êtes en faveur de l'argument : "+main_arg, height=5)
+
+    elif weighted_score < 0:
+        label = tk.Label(root, text="Vous êtes opposé à l'argument : "+main_arg, height=5)
+
     else:
-        label = tk.Label(root, text="Vous êtes opposé à l'argument principal !")
+        label = tk.Label(root, text="Vous êtes neutre vis-à-vis de l'argument : "+main_arg, height=5)
+
     label.pack(padx=10, pady=10)
+
+    fact = 100 / (pour + contre)
+    y = np.array([pour, contre])*fact
+
+    # Création de la figure matplotlib
+    fig, ax = plt.subplots()
+    ax.pie(y, labels=["Pour", "Contre"], colors=["lightgreen", "lightpink"])
+    ax.set_title("Répartition de vos choix")
+    ax.axis('equal')
+    ax.legend()
+
+    # Intégration de la figure dans Tkinter
+    canvas = FigureCanvasTkAgg(fig, master=root)
+    canvas.draw()
+    canvas.get_tk_widget().pack()
+
     root.mainloop()
 
 
@@ -298,7 +419,11 @@ def launch_home_window():
     root.mainloop()
 
 
-def launch_main_window():
+def launch_main_window(analyse_root):
+
+    if (analyse_root != None):
+        analyse_root.destroy()
+
     root = tk.Tk()
     root.title("Page principale")
     root.geometry("400x300")
@@ -310,7 +435,7 @@ def launch_main_window():
     
     load_button = tk.Button(root, 
                           text="Charger un débat", 
-                          command=lambda: load_debate_file(), 
+                          command=lambda: load_debate_file(root), 
                           width=20, 
                           height=2)
     load_button.pack(pady=10)
@@ -318,7 +443,7 @@ def launch_main_window():
     root.mainloop()
 
 
-def launch_selection_window(filename):
+def launch_selection_window(filename, root):
     selection_root = tk.Tk()
     selection_root.title("Débat")
     selection_root.geometry("400x400")
@@ -340,7 +465,7 @@ def launch_selection_window(filename):
     selected_num_questions.set(options[-1])
 
     titre = tk.Label(selection_root, 
-                    text="Sélectionner le nombre de questions", 
+                    text="Sélectionnez le nombre de questions", 
                     font=("Arial", 14), wraplength=380, 
                     justify="center")
     titre.pack(pady=10)
@@ -367,7 +492,7 @@ def launch_selection_window(filename):
 
     start_button = tk.Button(selection_root, 
                            text="Lancer le débat", 
-                           command=lambda: launch_debate_window(selection_root, filename, selected_num_questions.get(), selected_strategy.get()),
+                           command=lambda: launch_debate_window(selection_root, filename, selected_num_questions.get(), selected_strategy.get(), root),
                            width=20, 
                            height=2)
     start_button.pack(pady=10)
@@ -375,7 +500,8 @@ def launch_selection_window(filename):
     selection_root.mainloop()
 
 
-def launch_debate_window(selection_root, filename, nb, strategy):
+def launch_debate_window(selection_root, filename, nb, strategy, root):
+    root.destroy()
     selection_root.destroy()
     debate_root = tk.Tk()
     app = DebateApp(debate_root, filename, nb, strategy)
@@ -407,7 +533,7 @@ def launch_login_window(root):
                 myUsername = username
                 login_root.destroy()
                 root.destroy()
-                launch_main_window()
+                launch_main_window(None)
             else:
                 messagebox.showerror("Erreur", "Nom d'utilisateur/Mot de passe incorrect")
         else:
@@ -450,7 +576,7 @@ def launch_register_window(root):
                     json.dump(log_dict, f2)
                 login_root.destroy()
                 root.destroy()
-                launch_main_window()
+                launch_main_window(None)
             else:
                 messagebox.showerror("Erreur", "Ce nom d'utilisateur n'est pas disponible")
         else:
@@ -465,10 +591,10 @@ def launch_register_window(root):
     login_button.pack(pady=10)
 
 
-def load_debate_file():
+def load_debate_file(root):
     file_path = filedialog.askopenfilename(title="Sélectionner un fichier de débat", filetypes=[("Fichiers JSON", "*.json")])
     if file_path:
-        launch_selection_window(file_path)
+        launch_selection_window(file_path, root)
 
 
 if __name__ == '__main__':
