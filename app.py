@@ -5,9 +5,11 @@ from graph import DebateGraph
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
-
+import platform
+import sys
 import os
-if (os.name == "posix"):
+
+if (platform.system() == "Darwin"):
     import tkmacosx as tkmac
 
 
@@ -46,7 +48,7 @@ class DebateApp:
                             font=("Arial", 14))
         self.label.pack(pady=10, fill="both", expand=True)
         
-        if os.name == "posix":
+        if platform.system() == "Darwin" :
             self.arg1_button = tkmac.Button(self.root, 
                                     text="",  
                                     command=lambda: self.next_step(None),
@@ -158,12 +160,6 @@ class DebateApp:
 
     def toggle_node_info(self):
         """Toggle node info display setting"""
-        val = self.show_node_info.get()
-        if (val == False):
-            self.show_node_info.set(True)  
-        else: 
-            self.show_node_info.set(False)  
-        print(f"Toggle node info - New value: {val}")  # Debug
         self._refresh_display(None)
     
     def _refresh_display(self, feedback):
@@ -307,11 +303,11 @@ class DebateApp:
         else:
             self.weighted_score +=  buffer_score / self.graph.nodes[node].get('level', '?') 
 
-        if (buffer_score == 1):
-            self.pour += buffer_score / self.graph.nodes[node].get('level', '?')
+            if (buffer_score == 1):
+                self.pour += buffer_score / self.graph.nodes[node].get('level', '?')
 
-        else:
-            self.contre += buffer_score / self.graph.nodes[node].get('level', '?')*(-1)
+            else:
+                self.contre += buffer_score / self.graph.nodes[node].get('level', '?')*(-1)
 
         self.score += buffer_score
 
