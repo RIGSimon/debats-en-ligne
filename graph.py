@@ -239,46 +239,50 @@ def cut_no_choice(graph, root):
         pass # Répéter (until False)
     return graphCut
 
-    
-"""def tournament_order(graph, root):
-    
+
+def tournois_possibles(graphe, root):
+    result = []
+    def dfs(node):
+        enfants = list(graphe.successors(node))
+        if len(enfants) >= 4:
+            result.append(node)
+        for enfant in enfants:
+            dfs(enfant)
+    dfs(root)
+    argcount = [len(list(graphe.successors(n))) for n in result]
+    return [result for _,result in sorted(zip(argcount,result))][::-1]
+        
+def tournament_order(graph, root, tournois=[]):
+    """
     Crée une stratégie de type tournoi pour comparer les arguments jusqu'à un gagnant.
-    Retourne le noeud principal (main_arg) et une structure de rounds (liste de paires).
+    Retourne le noeud principal (main_arg) et les arguments du tournois (liste).
+    """
+    graph = cut_no_choice(graph, root) #on coupe les noeuds sans opposition (inutile pour les tournois)
+    t = tournois_possibles(graph, root)[0]
+    tournois = [t]
     
-    from random import shuffle
     root_succ = [succ for succ in graph.successors(root)][0]
     main_arg = [succ for succ in graph.successors(root_succ)][0]
 
-    # Tous les descendants de main_arg (exclut le root)
-    all_nodes = list(nx.descendants(graph, main_arg))
-    shuffle(all_nodes)  # mélanger un peu pour la variété
-
-    rounds = []
-    current_round = all_nodes[:]
-
-    while len(current_round) > 1:
-        if len(current_round) % 2 == 1:
-            current_round.append(None)  # si impair
-
-        round_pairs = []
-        next_round = []
-        for i in range(0, len(current_round), 2):
-            a = current_round[i]
-            b = current_round[i+1]
-            if a is None or b is None:
-                next_round.append(a or b)
+    tour = []
+    for n in tournois:
+        L = list(graph.successors(n))
+        L1, L2 = [],[]
+        for f in L:
+            if (graph.get_edge_data(n, f).get("relation", 0))==1:
+                L1.append(f)
             else:
-                round_pairs.append((a, b))
-        rounds.append(round_pairs)
-        current_round = next_round  # à compléter au fur et à mesure des choix utilisateur
+                L2.append(f)
+        #les pours en premier les contres en deuxième
+        tour.append([L1,L2])
 
-    return main_arg, rounds""" # je vais changer
+    return main_arg, [tour,tournois]
 
 if __name__ == '__main__':
     filename = "./data/27596.json"
     Graph = DebateGraph(filename, nb=10, strategy="tournoi")
     #Graph.G = Graph.extract_limited_tree(Graph.G, Graph.root, 2)
-    Graph.display_graph(Graph.G)
-    graphcut = cut_no_choice(Graph.G, Graph.root) #on retire tous les arguments de même bord pour simplifier le graphe
-    Graph.display_graph(graphcut)
-    print("graphe complet:", len(Graph.G), "graphe homogene:", len(graphcut))
+    
+    print(Graph.order)
+    
+    
