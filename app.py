@@ -32,8 +32,22 @@ class DebateApp:
 
         self.pour = 0
         self.contre = 0
+        
+        #tournois
+        self.waiting_var = tk.BooleanVar()
+        
+        self.chosen_node = None
+        self.current_node1 = None
+        self.current_node2 = None
+        
+        self.strategy = strategy
+        self.is_tournoi = strategy == "tournoi"
+        if self.is_tournoi:
+            print(self.order)
+            self.parents = self.order[1]
+            self.order = self.order[0]
+        self.current_tournoi_index = 0
 
-        # Add settings menu
         menubar = tk.Menu(root)
         settings_menu = tk.Menu(menubar, tearoff=0)
         self.show_node_info = tk.BooleanVar(value=False)  
@@ -42,12 +56,12 @@ class DebateApp:
                             command=self.toggle_node_info)
         menubar.add_cascade(label="Paramètres", menu=settings_menu)
         root.config(menu=menubar)
-        
+
         self.label = tk.Label(self.root, 
                             text="Choisissez l'argument le plus convaincant", 
                             font=("Arial", 14))
         self.label.pack(pady=10, fill="both", expand=True)
-        
+
         if platform.system() == "Darwin" :
             self.arg1_button = tkmac.Button(self.root, 
                                     text="",  
@@ -57,25 +71,6 @@ class DebateApp:
                                     text="", 
                                     command=lambda: self.next_step(None), 
                                     justify="left")
-            
-            """
-            self.arg1_button = tk.Label(self.root,
-                   text="",
-                   wraplength=500,
-                   justify="left",
-                   cursor="hand2")
-            self.arg1_button.bind("<Button-1>", lambda e: self.next_step(None))
-
-            self.arg2_button = tk.Label(self.root,
-                   text="",
-                   wraplength=500,
-                   justify="left",
-                   cursor="hand2")
-            self.arg2_button.bind("<Button-1>", lambda e: self.next_step(None))
-
-            """
-        
-            
         else:
             self.arg1_button = tk.Button(self.root, 
                                     text="",  
@@ -88,13 +83,12 @@ class DebateApp:
                                     wraplength=500,
                                     justify="left")
 
-
         self.unable_button = tk.Button(self.root, 
                                     text="Je ne peux pas décider", 
                                     command=lambda: self.next_step(None), 
                                     width=40, 
                                     height=3)
-        
+
         self.back_button = tk.Button(self.root, 
                                     text="↩️",
                                     command=lambda: self.next_step(1), 
@@ -109,7 +103,7 @@ class DebateApp:
                                     height=2) 
         self.context_button.pack(side=tk.TOP, anchor = tk.NE)
 
-        self.show = False # par defaut
+        self.show = False
         self.show_label = None
 
         self.show_button = tk.Button(self.root, 
@@ -117,7 +111,7 @@ class DebateApp:
                                     command=lambda: self.show_main_arg(self.debate_graph), 
                                     width=2, 
                                     height=2)
-        
+
         self.set_feedback = tk.Button(self.root, 
                                     text="Feedback",
                                     command=lambda: self.ask_feedback(self.root), 
@@ -186,7 +180,12 @@ class DebateApp:
                 self.graph.nodes[main_arg].get("text", main_arg)
             ))
         """
-
+        
+        if self.is_tournoi: #pour le tournois
+            if self.current_node1 and self.current_node2:
+                self.ask_user_to_choose(self.current_node1, self.current_node2)
+            return
+        
         # Refresh current buttons
         if self.index - 2 < len(self.order) - 1:            
             n = ((len(self.order)//self.nb_transitions))*2 # pour 10 comp, n=10 (index)
@@ -228,7 +227,51 @@ class DebateApp:
 
                     with open('feedback_db.json', 'w') as f2:
                         json.dump(feedback_db, f2)
+                        
+    def _get_best_argument(self, candidates):
+        return candidates[0] if candidates else None
 
+    def run_tournament(self, nodes):
+        current_round = nodes[:]
+        while len(current_round) > 1:
+            next_round = []
+            for i in range(0, len(current_round), 2):
+                if i + 1 < len(current_round):
+                    winner = self.ask_user_to_choose(current_round[i], current_round[i + 1])
+                    next_round.append(winner)
+                else:
+                    next_round.append(current_round[i])  # Passe automatiquement au tour suivant
+            current_round = next_round
+        return current_round[0]
+
+    def _display_arguments(self, node1, node2):
+        if not node1 or not node2:
+            return
+        self.arg1_button.config(text=self._format_node_text(node1, self.graph.nodes[node1].get("text", node1)), 
+                                command=lambda:[self.next_step(None), self.update_score(node1)])
+        self.arg2_button.config(text=self._format_node_text(node2, self.graph.nodes[node2].get("text", node2)), 
+                                command=lambda:[self.next_step(None), self.update_score(node2)])
+        self._set_button_colors(self.arg1_button, node1)
+        self._set_button_colors(self.arg2_button, node2)
+        
+    def ask_user_to_choose(self, node1, node2):
+        self.current_node1 = node1
+        self.current_node2 = node2
+        self.chosen_node = None
+        self.waiting_var.set(False)
+    
+        def choose_node(n):
+            self.chosen_node = n
+            #self.update_score(n) inutile pour le tournois
+            self.waiting_var.set(True)
+    
+        self._display_arguments(node1, node2)
+        self.arg1_button.config(command=lambda: choose_node(node1))
+        self.arg2_button.config(command=lambda: choose_node(node2))
+        self.unable_button.config(command=lambda: choose_node(None))
+    
+        self.root.wait_variable(self.waiting_var)
+        return self.chosen_node
 
     def choose_arg (self):
         new_window = tk.Tk()
@@ -375,9 +418,25 @@ class DebateApp:
 
             self.score += buffer_score
 
-
     def next_step(self, choice):
         print('next', self.index)
+        
+        if self.is_tournoi: #tournois
+            if self.current_tournoi_index >= len(self.order):
+                self._end_debate()
+                return
+        
+            pour_list, contre_list = self.order[self.current_tournoi_index]
+            
+            best_pour = self.run_tournament(pour_list)
+            best_contre = self.run_tournament(contre_list)
+        
+            # Final match
+            winner = self.ask_user_to_choose(best_pour, best_contre)
+            self.current_tournoi_index += 1
+            self.next_step(None)
+            return
+        
         if self.index >= len(self.order):
             self.label.config(text="Fin du débat")
             self.back_button.destroy()
@@ -409,7 +468,73 @@ class DebateApp:
                     self.index -= 2
                     self._refresh_display(None)
                 
+    def _end_debate(self):
+        self.label.config(text="Fin du débat")
+        self.back_button.destroy()
+        self.arg1_button.pack_forget()
+        self.arg2_button.pack_forget()
+        self.unable_button.pack_forget()
+        self.set_feedback.pack_forget()
+        self.context_button.pack_forget()
+        self.show_button.pack_forget()
+        
+        node = self.chosen_node
+        argument = self.graph.nodes[node].get("text", node)
+        pour = self.graph.get_edge_data(self.parents[0], node).get("relation", 0) == 1
+        
+        arg_button = tk.Button(self.root, 
+                               text="Analyse des résultats",  
+                               command=lambda: analyse_tournoi(self.chosen_node, self.parents, self.graph, self.root, self.debate_graph.nodes[self.parents[0]].get("text", self.debate_graph.main_arg)),
+                               wraplength=500, 
+                               justify="left")
+        arg_button.pack(pady=5, expand=True)
 
+def analyse_tournoi(chosen_node, parents, graph, debate_root, pere):
+    debate_root.destroy()
+    root = tk.Tk()
+    root.title("Résultats du Tournoi")
+
+    # Bouton retour
+    button = tk.Button(root,
+                       text="Home", 
+                       command=lambda: launch_main_window(root), 
+                       width=3,
+                       height=2)
+    button.place(x=10, y=10)
+
+    # Texte de l'argument choisi
+    argument = graph.nodes[chosen_node].get("text", chosen_node)
+    argument_label = tk.Label(root,
+                              text="Argument sélectionné :\n" + argument,
+                              wraplength=500,
+                              justify="left",
+                              font=("Arial", 12))
+    argument_label.pack(pady=10)
+
+    # Déterminer la position par rapport à l'argument principal
+    try:
+        relation = graph.get_edge_data(parents[0], chosen_node).get("relation", 0)
+    except:
+        relation = 0
+
+    if relation == 1:
+        position = "Vous êtes en faveur de l'argument :"
+        sizes = [100, 0]
+        colors = ["lightgreen", "lightpink"]
+    elif relation == -1:
+        position = "Vous êtes opposé à l'argument :"
+        sizes = [0, 100]
+        colors = ["lightgreen", "lightpink"]
+        
+    position_label = tk.Label(root,
+                              text=f"{position}\n{pere}",
+                              font=("Arial", 12),
+                              wraplength=500,
+                              justify="center")
+    position_label.pack(pady=10)
+
+    root.mainloop()
+            
 def analyse_window(score, weighted_score, pour, contre, transitions_infos, debate_root, main_arg):
     debate_root.destroy()
     root = tk.Tk()
@@ -543,7 +668,7 @@ def launch_selection_window(filename, root):
     num_questions_menu.pack(pady=10)
 
     # Strategy selection
-    strategies = ["random", "BFS", "DFS", "priority"]
+    strategies = ["random", "BFS", "DFS", "priority", "tournoi"]
     selected_strategy = tk.StringVar(selection_root)
     selected_strategy.set(strategies[0])
 

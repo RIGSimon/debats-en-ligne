@@ -53,7 +53,7 @@ class DebateGraph:
         elif strategy == "priority":
             self.main_arg, self.order = priority_order(self.G, self.root)
         elif strategy == "tournoi":
-            self.main_arg, self.order = tournament_order(self.G, self.root)
+            self.main_arg, self.order = tournament_order(self.G, self.root, nb)
         else:
             raise ValueError("Unknown strategy")
         
@@ -102,7 +102,7 @@ class DebateGraph:
     
         nx.draw_networkx_edges(G, pos, arrowstyle="->", arrowsize=20, edge_color=edge_colors)
     
-        labels = {node: f"{node}\n{self.nodes[node]['text'][:30]}..." for node in G.nodes()}
+        labels = {node: f"{node}\n{self.nodes[node]['text'][:25]}..." for node in G.nodes()}
         nx.draw_networkx_labels(G, pos, labels, font_size=8, font_color="black")
         plt.title(title, fontsize=15)
         plt.axis("off") 
@@ -252,13 +252,21 @@ def tournois_possibles(graphe, root):
     argcount = [len(list(graphe.successors(n))) for n in result]
     return [result for _,result in sorted(zip(argcount,result))][::-1]
         
-def tournament_order(graph, root, tournois=[]):
+def tournament_order(graph, root, nb):
     """
     Crée une stratégie de type tournoi pour comparer les arguments jusqu'à un gagnant.
     Retourne le noeud principal (main_arg) et les arguments du tournois (liste).
     """
     graph = cut_no_choice(graph, root) #on coupe les noeuds sans opposition (inutile pour les tournois)
+    diff = 100
     t = tournois_possibles(graph, root)[0]
+    for currT in tournois_possibles(graph, root):
+        diffCurr = abs(len(currT)-1-nb)
+        if(diffCurr<diff):
+            print(diff, nb)
+            diff = diffCurr
+            t = currT
+    #t = tournois_possibles(graph, root)[0]
     tournois = [t]
     
     root_succ = [succ for succ in graph.successors(root)][0]
@@ -279,10 +287,11 @@ def tournament_order(graph, root, tournois=[]):
     return main_arg, [tour,tournois]
 
 if __name__ == '__main__':
-    filename = "./data/27596.json"
+    filename = "./data/1229.json"
     Graph = DebateGraph(filename, nb=10, strategy="tournoi")
-    #Graph.G = Graph.extract_limited_tree(Graph.G, Graph.root, 2)
-    
+    Graph.G = Graph.extract_limited_tree(Graph.G, Graph.root, 1)
+    Graph.display_graph(Graph.G)
+    print(Graph.nodes['1229.7']['text'])
     print(Graph.order)
     
     
