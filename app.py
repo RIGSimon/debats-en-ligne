@@ -129,6 +129,16 @@ class DebateApp:
         self.unable_button.pack(pady=10)
         self.show_button.pack(side=tk.LEFT)
         self.set_feedback.pack()
+
+        # Pour la transivité
+        self.A = None
+        self.B = None
+        self.C = None
+        self.D = None
+        self.nb_transitions = len(self.order)*0.2
+        self.transition = False
+        self.transitions_infos = [0, 0] # nb transitions valides / nb transitions non valides 
+        self.compte = False
         
         self.next_step(None)  # Afficher la première paire
     
@@ -178,13 +188,26 @@ class DebateApp:
         """
 
         # Refresh current buttons
-        if self.index < len(self.order) - 1:
-            #index = self.index-2 # (next step adds 2)
-            node1 = self.order[self.index]
-            node2 = self.order[self.index+1]
+        if self.index - 2 < len(self.order) - 1:            
+            n = ((len(self.order)//self.nb_transitions))*2 # pour 10 comp, n=10 (index)
+
+            if (self.index % n == 0) and (self.index != 0) and not self.transition:
+                node1 = self.A
+                node2 = self.C
+                self.transition = True
+
+            else:
+                node1 = self.order[self.index]
+                node2 = self.order[self.index+1]
+
+                if self.transition:
+                    self.transition = False
+
+            print("index =", self.index)
+            print("transition ?", self.transition)
             
-            self.arg1_button.config(text=self._format_node_text(node1, self.graph.nodes[node1].get("text", node1)), command=lambda:[self.next_step(None), self.update_score(node1)])
-            self.arg2_button.config(text=self._format_node_text(node2, self.graph.nodes[node2].get("text", node2)), command=lambda:[self.next_step(None), self.update_score(node2)])
+            self.arg1_button.config(text=self._format_node_text(node1, self.graph.nodes[node1].get("text", node1)), command=lambda:[self.update_score(node1, self.index), self.next_step(None)])
+            self.arg2_button.config(text=self._format_node_text(node2, self.graph.nodes[node2].get("text", node2)), command=lambda:[self.update_score(node2, self.index+1), self.next_step(None)])
 
             self._set_button_colors(self.arg1_button, node1)
             self._set_button_colors(self.arg2_button, node2)
@@ -284,37 +307,78 @@ class DebateApp:
         button.destroy()
 
 
-    def update_score(self, node):
-        cur_node = node
-        prev_node = list(self.graph.predecessors(cur_node))[0]
-        buffer_score = 1
-        done = False
-        while not done:
-            if int(self.graph.get_edge_data(prev_node, cur_node)["relation"]) == 0.0:
-                done = True
-                break
-            buffer_score = buffer_score * int(self.graph.get_edge_data(prev_node, cur_node)["relation"])
-            cur_node = list(self.graph.predecessors(cur_node))[0]
-            prev_node = list(self.graph.predecessors(prev_node))[0]
+    def update_score(self, node, chosen_node_index):
+        n = ((len(self.order)//self.nb_transitions)) # pour 10 comp, n=5 (numero de comp)
+        print(self.index, chosen_node_index, n)
+
+        if (self.index + 4) % n == 0: # a 2 comp
+            self.A = self.order[chosen_node_index] 
+
+            if (chosen_node_index == self.index): 
+                self.B = self.order[chosen_node_index+1]
+            
+            else: # on a choisi self.index+1
+                self.B = self.order[chosen_node_index-1]
+            
+            print("A =", self.graph.nodes[self.A].get("text", self.A))
+            print("B =", self.graph.nodes[self.B].get("text", self.B))
+                
+        if (self.index + 2) % n == 0: # a 1 comp
+            self.C = self.order[chosen_node_index] 
+
+            if chosen_node_index == self.index:
+                self.D = self.order[chosen_node_index+1]
+                
+            else:
+                self.D = self.order[chosen_node_index-1]
+
+            print("C =", self.graph.nodes[self.C].get("text", self.C))
+            print("D =", self.graph.nodes[self.D].get("text", self.D))
         
-        if (self.graph.nodes[node].get('level', '?') == 0):
-            self.weighted_score +=  buffer_score
+        if self.transition :
+            self.compte = True
 
-        else:
-            self.weighted_score +=  buffer_score / self.graph.nodes[node].get('level', '?') 
+        if self.compte :
+            if node == self.A:
+                self.transitions_infos[0] += 1
+            
+            if node == self.C:
+                self.transitions_infos[1] += 1
 
-            if (buffer_score == 1):
-                self.pour += buffer_score / self.graph.nodes[node].get('level', '?')
+            self.compte = False
+            print("Infos Transitions - Cohérence :", self.transitions_infos)    
+        
+        if not self.transition: # le test de la transitivité ne doit pas impacter le score
+            cur_node = node
+            prev_node = list(self.graph.predecessors(cur_node))[0]
+            buffer_score = 1
+            done = False
+            while not done:
+                if int(self.graph.get_edge_data(prev_node, cur_node)["relation"]) == 0.0:
+                    done = True
+                    break
+                buffer_score = buffer_score * int(self.graph.get_edge_data(prev_node, cur_node)["relation"])
+                cur_node = list(self.graph.predecessors(cur_node))[0]
+                prev_node = list(self.graph.predecessors(prev_node))[0]
+            
+            if (self.graph.nodes[node].get('level', '?') == 0):
+                self.weighted_score +=  buffer_score
 
             else:
-                self.contre += buffer_score / self.graph.nodes[node].get('level', '?')*(-1)
+                self.weighted_score +=  buffer_score / self.graph.nodes[node].get('level', '?') 
 
-        self.score += buffer_score
+                if (buffer_score == 1):
+                    self.pour += buffer_score / self.graph.nodes[node].get('level', '?')
+
+                else:
+                    self.contre += buffer_score / self.graph.nodes[node].get('level', '?')*(-1)
+
+            self.score += buffer_score
 
 
     def next_step(self, choice):
         print('next', self.index)
-        if self.index >= len(self.order) - 1:
+        if self.index >= len(self.order):
             self.label.config(text="Fin du débat")
             self.back_button.destroy()
             self.arg1_button.pack_forget()
@@ -326,14 +390,17 @@ class DebateApp:
             
             arg_button = tk.Button(self.root, 
                                 text="Analyse des résultats",  
-                                command=lambda: analyse_window(self.score, self.weighted_score, self.pour, self.contre, self.root, self.debate_graph.nodes[self.debate_graph.main_arg].get("text", self.debate_graph.main_arg)),
+                                command=lambda: analyse_window(self.score, self.weighted_score, self.pour, self.contre, self.transitions_infos, self.root, self.debate_graph.nodes[self.debate_graph.main_arg].get("text", self.debate_graph.main_arg)),
                                 wraplength=500, 
                                 justify="left")
             arg_button.pack(pady=5, expand=True)
             return
         
         if choice == None:
-            self.index += 2
+
+            if not self.transition:
+                self.index += 2
+
             self._refresh_display(None)
             
         else:
@@ -342,9 +409,8 @@ class DebateApp:
                     self.index -= 2
                     self._refresh_display(None)
                 
-                
 
-def analyse_window(score, weighted_score, pour, contre, debate_root, main_arg):
+def analyse_window(score, weighted_score, pour, contre, transitions_infos, debate_root, main_arg):
     debate_root.destroy()
     root = tk.Tk()
     root.title("Résultats")
@@ -385,6 +451,11 @@ def analyse_window(score, weighted_score, pour, contre, debate_root, main_arg):
     canvas = FigureCanvasTkAgg(fig, master=root)
     canvas.draw()
     canvas.get_tk_widget().pack()
+
+    # Affichage cohérence des transitivités
+    p = transitions_infos[0]/(transitions_infos[0]+transitions_infos[1])*100
+    label_trans = tk.Label(root, text="Taux de cohérence par rapport aux tests de transitivité : "+ str(p) + " %")
+    label_trans.pack(padx=10, pady=10)
 
     root.mainloop()
 
