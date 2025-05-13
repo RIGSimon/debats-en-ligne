@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
 import platform
-import sys
 import os
 import math
 
@@ -457,7 +456,7 @@ class DebateApp:
         
         if self.index >= len(self.order) - 1:
             self.label.config(text="Fin du débat")
-            self.back_button.destroy()
+            # self.back_button.destroy()
             self.arg1_button.pack_forget()
             self.arg2_button.pack_forget()
             self.unable_button.pack_forget()
@@ -490,7 +489,7 @@ class DebateApp:
                 
     def _end_debate(self):
         self.label.config(text="Fin du débat")
-        self.back_button.destroy()
+        # self.back_button.destroy()
         self.arg1_button.pack_forget()
         self.arg2_button.pack_forget()
         self.unable_button.pack_forget()
@@ -693,6 +692,7 @@ def launch_selection_window(filename, root):
 
     options = [i for i in range(10, nb_comp_tot + 1, 20)]
     options.append(nb_comp_tot)
+    options_ajout = []
 
     for i in range (len(options)):
         nb_arg = options[i]*2
@@ -700,6 +700,7 @@ def launch_selection_window(filename, root):
         n = nb_arg//nb_transitions*2
         nb_tot = options[i] + math.floor(nb_arg/n)
         options[i] = nb_tot
+        options_ajout.append(math.floor(nb_arg/n))
         # print(nb_transitions, nb_arg, n, nb_tot)
 
     selected_num_questions = tk.IntVar(selection_root)
@@ -733,7 +734,7 @@ def launch_selection_window(filename, root):
 
     start_button = tk.Button(selection_root, 
                            text="Lancer le débat", 
-                           command=lambda: launch_debate_window(selection_root, filename, selected_num_questions.get(), selected_strategy.get(), root),
+                           command=lambda: launch_debate_window(selection_root, filename, options_ajout, options, selected_num_questions.get(), selected_strategy.get(), root),
                            width=20, 
                            height=2)
     start_button.pack(pady=10)
@@ -741,11 +742,14 @@ def launch_selection_window(filename, root):
     selection_root.mainloop()
 
 
-def launch_debate_window(selection_root, filename, nb, strategy, root):
+def launch_debate_window(selection_root, filename, options_ajout, options, nb, strategy, root):
     root.destroy()
     selection_root.destroy()
     debate_root = tk.Tk()
-    app = DebateApp(debate_root, filename, nb, strategy)
+    ind = options.index(nb)
+    nb_final = nb - options_ajout[ind]
+    # print("nb =", nb_final)
+    app = DebateApp(debate_root, filename, nb_final, strategy)
     debate_root.mainloop()
 
 
