@@ -8,6 +8,7 @@ import numpy as np
 import platform
 import sys
 import os
+import math
 
 if (platform.system() == "Darwin"):
     import tkmacosx as tkmac
@@ -45,7 +46,7 @@ class DebateApp:
         self.strategy = strategy
         self.is_tournoi = strategy == "tournoi"
         if self.is_tournoi:
-            print(self.order)
+            # print(self.order)
             self.parents = self.order[1]
             self.order = self.order[0]
         self.current_tournoi_index = 0
@@ -64,26 +65,16 @@ class DebateApp:
                             font=("Arial", 14))
         self.label.pack(pady=10, fill="both", expand=True)
 
-        if platform.system() == "Darwin" :
-            self.arg1_button = tkmac.Button(self.root, 
-                                    text="",  
-                                    command=lambda: self.next_step(None),
-                                    justify="left")
-            self.arg2_button = tkmac.Button(self.root, 
-                                    text="", 
-                                    command=lambda: self.next_step(None), 
-                                    justify="left")
-        else:
-            self.arg1_button = tk.Button(self.root, 
-                                    text="",  
-                                    command=lambda: self.next_step(None),
-                                    wraplength=500,
-                                    justify="left")
-            self.arg2_button = tk.Button(self.root, 
-                                    text="", 
-                                    command=lambda: self.next_step(None), 
-                                    wraplength=500,
-                                    justify="left")
+        self.arg1_button = tk.Button(self.root, 
+                                text="",  
+                                command=lambda: self.next_step(None),
+                                wraplength=500,
+                                justify="left")
+        self.arg2_button = tk.Button(self.root, 
+                                text="", 
+                                command=lambda: self.next_step(None), 
+                                wraplength=500,
+                                justify="left")
 
         self.unable_button = tk.Button(self.root, 
                                     text="Je ne peux pas décider", 
@@ -91,12 +82,14 @@ class DebateApp:
                                     width=40, 
                                     height=3)
 
+        """
         self.back_button = tk.Button(self.root, 
                                     text="↩️",
                                     command=lambda: self.next_step(1), 
                                     width=2, 
                                     height=2) 
         self.back_button.place(x=10, y=10)
+        """
 
         self.context_button = tk.Button(self.root,
                                     text="Contexte",
@@ -131,7 +124,7 @@ class DebateApp:
         self.B = None
         self.C = None
         self.D = None
-        self.nb_transitions = len(self.order)*0.2
+        self.nb_transitions = round(len(self.order)*0.2,2)
         self.transition = False
         self.transitions_infos = [0, 0] # nb transitions valides / nb transitions non valides 
         self.compte = False
@@ -143,8 +136,25 @@ class DebateApp:
         if not self.show_node_info.get():
             return text
         
+        if platform.system() == "Darwin":
+            predecessors = list(self.graph.predecessors(node_id))
+            if predecessors:
+                edge_data = self.graph.get_edge_data(predecessors[0], node_id)
+                if edge_data:
+                    relation = edge_data['relation']
+                    if relation == 1:
+                        arg = "[Pour]"
+
+                    elif relation == -1:
+                        arg = "[Contre]"
+
+                    else:
+                        arg = ""
+        else:
+            arg = ""
+        
         level = self.graph.nodes[node_id].get('level', '?')
-        return f"{text}\nNiveau: {level}"
+        return f"{text}\nNiveau: {level} {arg}"
     
     def _set_button_colors(self, button, node_id):
         """Set button color based on relation if show_info is active"""
@@ -171,7 +181,7 @@ class DebateApp:
     def _refresh_display(self, feedback):
         global myUsername
 
-        print('refresh', self.index)
+        # print('refresh', self.index)
         """Refresh all displayed text and colors with current settings"""
         # Refresh main argument
         """
@@ -204,8 +214,8 @@ class DebateApp:
                 if self.transition:
                     self.transition = False
 
-            print("index =", self.index)
-            print("transition ?", self.transition)
+            # print("index =", self.index)
+            # print("transition ?", self.transition)
             
             idx1 = self.index
             idx2 = self.index + 1
@@ -355,12 +365,12 @@ class DebateApp:
 
 
     def update_score(self, node, chosen_node_index):
-        print("update ello:")
-        print(node, chosen_node_index)
-        print(self.order[chosen_node_index])
-        print(self.order, len(self.order))
-        n = ((len(self.order)//self.nb_transitions)) # pour 10 comp, n=5 (numero de comp)
-        print(self.index, chosen_node_index, n)
+        # print("update ello:")
+        # print(node, chosen_node_index)
+        # print(self.order[chosen_node_index])
+        # print(self.order, len(self.order))
+        n = ((len(self.order)//self.nb_transitions))*2 
+        # print(self.index, chosen_node_index, n)
 
         if (self.index + 4) % n == 0: # a 2 comp
             self.A = self.order[chosen_node_index] 
@@ -371,8 +381,8 @@ class DebateApp:
             else: # on a choisi self.index+1
                 self.B = self.order[chosen_node_index-1]
             
-            print("A =", self.graph.nodes[self.A].get("text", self.A))
-            print("B =", self.graph.nodes[self.B].get("text", self.B))
+            # print("A =", self.graph.nodes[self.A].get("text", self.A))
+            # print("B =", self.graph.nodes[self.B].get("text", self.B))
                 
         if (self.index + 2) % n == 0: # a 1 comp
             self.C = self.order[chosen_node_index] 
@@ -383,8 +393,8 @@ class DebateApp:
             else:
                 self.D = self.order[chosen_node_index-1]
 
-            print("C =", self.graph.nodes[self.C].get("text", self.C))
-            print("D =", self.graph.nodes[self.D].get("text", self.D))
+            # print("C =", self.graph.nodes[self.C].get("text", self.C))
+            # print("D =", self.graph.nodes[self.D].get("text", self.D))
         
         if self.transition :
             self.compte = True
@@ -397,7 +407,7 @@ class DebateApp:
                 self.transitions_infos[1] += 1
 
             self.compte = False
-            print("Infos Transitions - Cohérence :", self.transitions_infos)    
+            # print("Infos Transitions - Cohérence :", self.transitions_infos)    
         
         if not self.transition: # le test de la transitivité ne doit pas impacter le score
             cur_node = node
@@ -427,7 +437,7 @@ class DebateApp:
             self.score += buffer_score
 
     def next_step(self, choice):
-        print('next', self.index)
+        # print('next', self.index)
         
         if self.is_tournoi: #tournois
             if self.current_tournoi_index >= len(self.order):
@@ -469,12 +479,14 @@ class DebateApp:
                 self.index += 2
 
             self._refresh_display(None)
-            
+        
+        """
         else:
             if choice >= 0:
                 if self.index >= 2:
                     self.index -= 2
                     self._refresh_display(None)
+        """
                 
     def _end_debate(self):
         self.label.config(text="Fin du débat")
@@ -547,7 +559,7 @@ def analyse_window(score, weighted_score, tab_score, pour, contre, transitions_i
     debate_root.destroy()
     root = tk.Tk()
     root.title("Résultats")
-    print(tab_score)
+    # print(tab_score)
     button = tk.Button(root,
                         text="Home", 
                         command=lambda: launch_main_window(root), 
@@ -556,8 +568,8 @@ def analyse_window(score, weighted_score, tab_score, pour, contre, transitions_i
 
     button.place(x=10, y=10)
 
-    print(score)
-    print(weighted_score)
+    # print(score)
+    # print(weighted_score)
     save_user_score(username=username, strategy=strategy, score=tab_score.tolist())
     if weighted_score > 0:
         label = tk.Label(root, text="Vous êtes en faveur de l'argument : "+main_arg, height=5)
@@ -681,6 +693,14 @@ def launch_selection_window(filename, root):
 
     options = [i for i in range(10, nb_comp_tot + 1, 20)]
     options.append(nb_comp_tot)
+
+    for i in range (len(options)):
+        nb_arg = options[i]*2
+        nb_transitions = round(nb_arg*0.2, 2)
+        n = nb_arg//nb_transitions*2
+        nb_tot = options[i] + math.floor(nb_arg/n)
+        options[i] = nb_tot
+        # print(nb_transitions, nb_arg, n, nb_tot)
 
     selected_num_questions = tk.IntVar(selection_root)
     selected_num_questions.set(options[-1])
