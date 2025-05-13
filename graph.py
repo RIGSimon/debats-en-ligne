@@ -83,7 +83,20 @@ class DebateGraph:
         
         return limited_tree
 
-
+    def height(self):
+        """
+        Calcule la hauteur du graphe orienté en partant du noeud racine.
+        La hauteur est la longueur maximale d’un chemin du noeud racine à une feuille.
+        """
+        def dfs(node, depth):
+            # Si le noeud n’a pas de successeurs, on retourne la profondeur actuelle
+            if not list(self.G.successors(node)):
+                return depth
+            # Sinon, on calcule la profondeur maximale parmi tous les enfants
+            return max(dfs(child, depth + 1) for child in self.G.successors(node))
+        
+        return dfs(self.root, 0)
+        
     def display_graph(self, G, title="Graphe d'arguments"):
         plt.figure(figsize=(10, 6))
         pos = nx.nx_agraph.graphviz_layout(G, prog="dot")
