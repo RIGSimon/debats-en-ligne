@@ -8,6 +8,30 @@ Simon RIGOLLIER, Michelle SONG et Aurélien CHAMBOLLE-SOLAZ.
 Encadrant : Nicolas MAUDET
 
 
+## Organisation des fichiers et commandes à éxécuter
+
+debats-en-ligne
+├── app.py
+├── graph.py
+├── README.md
+├── Rapport_PANDRO.pdf
+├── data
+│   ├── 1229.json
+│   ├── 27596.json
+│   └── 30339.json
+└── db
+    ├── user_db.json
+    ├── feedback_db.json
+    └── user_stats.json
+
+
+Pour démarrer l'application, exécutez le fichier `app.py`. Pour générer un débat, vous pouvez choisir un des fichiers du dossier `data`.
+
+Le fichier `graph.py` contient l'implémentation du graphe associé au débat choisi. Si vous l'excécutez, vous pourrez visualiser ce graphe.
+
+Pour plus de détails, veuillez consuler le fichier `Rapport_PANDRO.pdf`.
+
+
 ## Contexte
 
 Les débats en ligne sont souvent influencés par la manière dont les arguments sont formulés, présentés et évalués. Sur des plateformes comme Kialo, les utilisateurs votent pour ou contre des arguments, mais ces votes ne permettent pas toujours de clarifier l'intention exacte des participants. Il est souvent difficile de savoir si un vote exprime un soutien à l'argument ou s'il reflète simplement une évaluation de sa pertinence.  

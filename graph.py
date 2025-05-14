@@ -4,6 +4,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 from collections import deque
 import random
+import os
+
+path_to_dir = os.path.dirname(os.path.abspath(__file__))
+path_to_data = path_to_dir + "/data/"
 
 class DebateGraph:
     def __init__(self, filename, nb, strategy="random"):
@@ -29,19 +33,17 @@ class DebateGraph:
             parent_id = edge_data["successor_id"]
             child_id = edge_id
             self.G.add_edge(parent_id, child_id, **edge_data)
-            
+
+            """
+            # ========== Ajout de la profondeur ('level') aux noeuds -> pas bon ==========
             # Set child level (parent level + 1)
             if 'level' not in self.G.nodes[child_id] or self.G.nodes[child_id]['level'] == -1:
                 self.G.nodes[child_id]['level'] = self.G.nodes[parent_id]['level'] + 1
-
-            """# Edge colors
-            relation = edge_data["relation"]
-            if relation == 1:
-                self.edge_colors.append("green")
-            elif relation == -1:
-                self.edge_colors.append("red")
-            else:
-                self.edge_colors.append("black")"""
+            """
+            
+        # ========== Ajout de la profondeur -> correction mais toujours pas bon? ==========
+        for node_id, _ in self.nodes.items():
+            self.G.nodes[node_id]['level'] = nx.single_source_shortest_path_length(self.G, source=self.root)[node_id]
 
         # Choose the order strategy
         if strategy == "random":
@@ -160,7 +162,10 @@ def DFS_order(graph, root):
 
     while stack:
         node = stack.pop()
-        order.append(node)
+
+        if node != root_succ:
+            order.append(node)
+            
         for successor in reversed(list(graph.successors(node))):  # Reverse to process left-to-right
             stack.append(successor)
 
@@ -233,10 +238,10 @@ def cut_no_choice(graph, root):
 
         #relationEdge = [graph.get_edge_data(node, child) for child in children]
         relations = [graph.get_edge_data(node, child).get("relation", 0) for child in children]
-        #print(node, relations)
+        # print(node, relations)
         # toutes les relations sont 1 ou toutes -1
         if all(r == 1 for r in relations) or all(r == -1 for r in relations):
-            #print("cut")
+            # print("cut")
             for child in children:
                 remove_all_succ(graph, child)
             return True
@@ -276,7 +281,7 @@ def tournament_order(graph, root, nb):
     for currT in tournois_possibles(graph, root):
         diffCurr = abs(len(currT)-1-nb)
         if(diffCurr<diff):
-            print(diff, nb)
+            # print(diff, nb)
             diff = diffCurr
             t = currT
     #t = tournois_possibles(graph, root)[0]
@@ -300,11 +305,11 @@ def tournament_order(graph, root, nb):
     return main_arg, [tour,tournois]
 
 if __name__ == '__main__':
-    filename = "./data/1229.json"
+    filename = path_to_data+"27596.json"
     Graph = DebateGraph(filename, nb=10, strategy="tournoi")
-    Graph.G = Graph.extract_limited_tree(Graph.G, Graph.root, 1)
+    # Graph.G = Graph.extract_limited_tree(Graph.G, Graph.root, 1) # pour afficher qu'une partie
     Graph.display_graph(Graph.G)
-    print(Graph.nodes['1229.7']['text'])
-    print(Graph.order)
+    # print(Graph.nodes['1229.7']['text'])
+    # print(Graph.order)
     
     

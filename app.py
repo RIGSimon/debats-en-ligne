@@ -9,11 +9,10 @@ import platform
 import os
 import math
 
-if (platform.system() == "Darwin"):
-    import tkmacosx as tkmac
-
-
 myUsername = None
+path_to_dir = os.path.dirname(os.path.abspath(__file__))
+path_to_db = path_to_dir + "/db/"
+
 
 class DebateApp:
     def __init__(self, root, filename, nb, strategy="random"):
@@ -30,6 +29,7 @@ class DebateApp:
         self.tab_score = np.zeros(self.debate_graph.height()) #tableau de taille hauteur de l'arbre
         self.graph = self.debate_graph.G.copy()
         self.order = self.debate_graph.order.copy()
+        # print(self.order)
         self.index = -2
 
         self.pour = 0
@@ -127,7 +127,8 @@ class DebateApp:
         self.transition = False
         self.transitions_infos = [0, 0] # nb transitions valides / nb transitions non valides 
         self.compte = False
-        
+        self.stop = False
+
         self.next_step(None)  # Afficher la première paire
     
     def _format_node_text(self, node_id, text):
@@ -161,24 +162,25 @@ class DebateApp:
             button.config(bg="light grey")  # Default color
             return
         
-        predecessors = list(self.graph.predecessors(node_id))
-        if predecessors:
-            edge_data = self.graph.get_edge_data(predecessors[0], node_id)
-            if edge_data:
-                relation = edge_data['relation']
-                if relation == 1:
-                    button.config(bg='#d4edda')  # Light green
-                elif relation == -1:
-                    button.config(bg='#f8d7da')  # Light red
-                else:
-                    button.config(bg='#d3d3d3')
+        if platform.system() != "Darwin":
+            predecessors = list(self.graph.predecessors(node_id))
+            if predecessors:
+                edge_data = self.graph.get_edge_data(predecessors[0], node_id)
+                if edge_data:
+                    relation = edge_data['relation']
+                    if relation == 1:
+                        button.config(bg='#d4edda')  # Light green
+                    elif relation == -1:
+                        button.config(bg='#f8d7da')  # Light red
+                    else:
+                        button.config(bg='#d3d3d3')
 
     def toggle_node_info(self):
         """Toggle node info display setting"""
         self._refresh_display(None)
     
     def _refresh_display(self, feedback):
-        global myUsername
+        global myUsername, path_to_db
 
         # print('refresh', self.index)
         """Refresh all displayed text and colors with current settings"""
@@ -191,25 +193,34 @@ class DebateApp:
                 self.graph.nodes[main_arg].get("text", main_arg)
             ))
         """
+
+        # print("index en dehors de la boucle :", self.index)
         
         if self.is_tournoi: #pour le tournois
             if self.current_node1 and self.current_node2:
                 self.ask_user_to_choose(self.current_node1, self.current_node2)
             return
         
-        # Refresh current buttons
-        if self.index >= 0 and self.index + 1 < len(self.order):       
-            n = ((len(self.order)//self.nb_transitions))*2 # pour 10 comp, n=10 (index)
 
-            if (self.index % n == 0) and (self.index != 0) and not self.transition:
+        n = ((len(self.order)//self.nb_transitions))*2 # pour 10 comp, n=10 (index)
+
+        # Refresh current buttons
+        if self.index >= 0 and (((len(self.order) % n == 0) and (self.index <= len(self.order))) or ((len(self.order) % n != 0) and (self.index < len(self.order)))):  
+            
+            if ((self.index + 2) % n == 0) and self.transition and self.stop:
                 node1 = self.A
                 node2 = self.C
-                self.transition = True
+                self.stop = False
 
             else:
                 node1 = self.order[self.index]
                 node2 = self.order[self.index+1]
+                # print("self.index = ",self.index, "text = ",self.graph.nodes[node1].get("text", node1), "\n")
+                # print("self.index+1 = ",self.index+1, "text = ", self.graph.nodes[node2].get("text", node2), "\n")
 
+                if ((self.index + 2) % n == 0) and not self.stop:
+                    self.stop = True
+                
                 if self.transition:
                     self.transition = False
 
@@ -225,11 +236,11 @@ class DebateApp:
             self._set_button_colors(self.arg2_button, node2)
             
             if (feedback != None):
-                if not os.path.exists('feedback_db.json'):
-                    with open('feedback_db.json', 'w') as f2:
+                if not os.path.exists(path_to_db+'feedback_db.json'):
+                    with open(path_to_db+'feedback_db.json', 'w') as f2:
                         f2.write("{}")
 
-                with open('feedback_db.json', 'r') as f1:
+                with open(path_to_db+'feedback_db.json', 'r') as f1:
                     feedback_db = json.load(f1)
 
                     if myUsername in feedback_db.keys():
@@ -238,7 +249,7 @@ class DebateApp:
                     else:
                         feedback_db[myUsername] = [str(node1) + ", " + str(node2) + " : " + feedback]
 
-                    with open('feedback_db.json', 'w') as f2:
+                    with open(path_to_db+'feedback_db.json', 'w') as f2:
                         json.dump(feedback_db, f2)
                         
     def _get_best_argument(self, candidates):
@@ -352,7 +363,7 @@ class DebateApp:
         feedback_entry = tk.Text(feedback_root, width=100, height=2)
         feedback_entry.pack(pady=5)
 
-        send_button = tk.Button(root, 
+        send_button = tk.Button(feedback_root, 
                            text="Envoyer", 
                            command=lambda:[self._refresh_display(feedback_entry.get("1.0", tk.END).strip()), self.destroy_windows(feedback_root, send_button)])
         
@@ -394,8 +405,9 @@ class DebateApp:
 
             # print("C =", self.graph.nodes[self.C].get("text", self.C))
             # print("D =", self.graph.nodes[self.D].get("text", self.D))
+            self.transition = True
         
-        if self.transition :
+        if self.transition and not self.stop:
             self.compte = True
 
         if self.compte :
@@ -406,7 +418,7 @@ class DebateApp:
                 self.transitions_infos[1] += 1
 
             self.compte = False
-            # print("Infos Transitions - Cohérence :", self.transitions_infos)    
+            print("Infos Transitions - Cohérence :", self.transitions_infos)    
         
         if not self.transition: # le test de la transitivité ne doit pas impacter le score
             cur_node = node
@@ -454,7 +466,7 @@ class DebateApp:
             self.next_step(None)
             return
         
-        if self.index >= len(self.order) - 1:
+        if ((self.index + 2 >= len(self.order)) and not self.stop):
             self.label.config(text="Fin du débat")
             # self.back_button.destroy()
             self.arg1_button.pack_forget()
@@ -474,9 +486,10 @@ class DebateApp:
         
         if choice == None:
 
-            if not self.transition:
+            if not self.stop:
                 self.index += 2
-
+            
+            #print("refresh")
             self._refresh_display(None)
         
         """
@@ -516,10 +529,8 @@ def analyse_tournoi(chosen_node, parents, graph, debate_root, pere):
     # Bouton retour
     button = tk.Button(root,
                        text="Home", 
-                       command=lambda: launch_main_window(root), 
-                       width=3,
-                       height=2)
-    button.place(x=10, y=10)
+                       command=lambda: launch_main_window(root))
+    button.pack(side=tk.TOP, expand=True, fill='both')
 
     # Texte de l'argument choisi
     argument = graph.nodes[chosen_node].get("text", chosen_node)
@@ -571,39 +582,62 @@ def analyse_window(score, weighted_score, tab_score, pour, contre, transitions_i
     # print(weighted_score)
     save_user_score(username=username, strategy=strategy, score=tab_score.tolist())
     if weighted_score > 0:
-        label = tk.Label(root, text="Vous êtes en faveur de l'argument : "+main_arg, height=5)
+        label = tk.Label(root, text="Vous êtes en faveur de l'argument : " + main_arg, height=5)
 
     elif weighted_score < 0:
-        label = tk.Label(root, text="Vous êtes opposé à l'argument : "+main_arg, height=5)
+        label = tk.Label(root, text="Vous êtes opposé à l'argument : " + main_arg, height=5)
 
     else:
-        label = tk.Label(root, text="Vous êtes neutre vis-à-vis de l'argument : "+main_arg, height=5)
+        label = tk.Label(root, text="Vous êtes neutre vis-à-vis de l'argument : " + main_arg, height=5)
 
     label.pack(padx=10, pady=10)
 
-    fact = 100 / (pour + contre)
-    y = np.array([pour, contre])*fact
+    # === Cadre horizontal pour les deux figures côte à côte ===
+    figures_frame = tk.Frame(root)
+    figures_frame.pack()
 
-    # Création de la figure matplotlib
-    fig, ax = plt.subplots()
-    ax.pie(y, labels=["Pour", "Contre"], colors=["lightgreen", "lightpink"])
-    ax.set_title("Répartition de vos choix")
-    ax.axis('equal')
-    ax.legend()
+    # --- Pie Chart ---
+    fact = 100 / (pour + contre) if (pour + contre) > 0 else 0
+    y = np.array([pour, contre]) * fact
 
-    # Intégration de la figure dans Tkinter
-    canvas = FigureCanvasTkAgg(fig, master=root)
-    canvas.draw()
-    canvas.get_tk_widget().pack()
+    fig1, ax1 = plt.subplots()
+    ax1.pie(y, labels=["Pour", "Contre"], colors=["lightgreen", "lightpink"], autopct='%1.1f%%')
+    ax1.set_title("Répartition de vos choix")
+    ax1.axis('equal')
 
-    # Affichage cohérence des transitivités
-    p = transitions_infos[0]/(transitions_infos[0]+transitions_infos[1])*100
-    label_trans = tk.Label(root, text="Taux de cohérence par rapport aux tests de transitivité : "+ str(p) + " %")
+    canvas1 = FigureCanvasTkAgg(fig1, master=figures_frame)
+    canvas1.draw()
+    canvas1.get_tk_widget().pack(side=tk.LEFT, padx=10)
+
+    # --- Bar Chart for tab_score ---
+    levels = [f"Niveau {i+1}" for i in range(len(tab_score))]
+    colors = ["green" if val > 0 else "red" if val < 0 else "gray" for val in tab_score]
+
+    fig2, ax2 = plt.subplots()
+    ax2.bar(levels, tab_score, color=colors)
+    ax2.set_title("Opinion par niveau")
+    ax2.set_xlabel("Niveaux")
+    ax2.set_ylabel("Score pondéré")
+    min_val = min(0, np.min(tab_score))
+    max_val = max(0.01, np.max(tab_score))
+    ax2.set_ylim(min_val * 1.2, max_val * 1.2)
+
+    canvas2 = FigureCanvasTkAgg(fig2, master=figures_frame)
+    canvas2.draw()
+    canvas2.get_tk_widget().pack(side=tk.LEFT, padx=10)
+
+    # --- Transition Coherence ---
+    total_transitions = transitions_infos[0] + transitions_infos[1]
+    if total_transitions > 0:
+        p = transitions_infos[0] / total_transitions * 100
+    else:
+        p = 0.0
+    label_trans = tk.Label(root, text=f"Taux de cohérence par rapport aux tests de transitivité : {p:.1f} %")
     label_trans.pack(padx=10, pady=10)
 
     root.mainloop()
 
-def save_user_score(username, strategy, score, filepath="user_stats.json"):
+def save_user_score(username, strategy, score, filepath=path_to_db+"user_stats.json"):
     # Charger le fichier s'il existe, sinon démarrer avec un dict vide
     if os.path.exists(filepath):
         with open(filepath, "r") as f:
@@ -772,7 +806,11 @@ def launch_login_window(root):
         password = password_entry.get()
 
         if username and password:
-            with open('user_db.json', 'r') as file:
+            if not os.path.exists(path_to_db+'user_db.json'):
+                with open(path_to_db+'user_db.json', 'w') as f:
+                    f.write("{}")
+
+            with open(path_to_db+'user_db.json', 'r') as file:
                 user_db = json.load(file)
             if username in user_db.keys() and user_db[username] == password:
                 myUsername = username
@@ -813,11 +851,11 @@ def launch_register_window(root):
         repassword = repassword_entry.get()
 
         if username and password and repassword and (password == repassword):
-            with open('user_db.json', 'r') as f1:
+            with open(path_to_db+'user_db.json', 'r') as f1:
                 log_dict = json.load(f1)
             if username not in log_dict.keys():
                 log_dict[username] = password
-                with open('user_db.json', 'w') as f2:
+                with open(path_to_db+'user_db.json', 'w') as f2:
                     json.dump(log_dict, f2)
                 login_root.destroy()
                 root.destroy()
