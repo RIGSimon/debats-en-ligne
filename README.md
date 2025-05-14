@@ -10,6 +10,7 @@ Encadrant : Nicolas MAUDET
 
 ## Organisation des fichiers et commandes à éxécuter
 
+```
 debats-en-ligne
 ├── app.py
 ├── graph.py
@@ -23,7 +24,7 @@ debats-en-ligne
     ├── user_db.json
     ├── feedback_db.json
     └── user_stats.json
-
+```
 
 Pour démarrer l'application, exécutez le fichier `app.py`. Pour générer un débat, vous pouvez choisir un des fichiers du dossier `data`.
 
