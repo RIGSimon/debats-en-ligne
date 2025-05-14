@@ -240,20 +240,29 @@ class DebateApp:
                 # print("self.index = ",self.index, "text = ",self.graph.nodes[node1].get("text", node1), "\n")
                 # print("self.index+1 = ",self.index+1, "text = ", self.graph.nodes[node2].get("text", node2), "\n")
 
-                if ((self.index + 2) % n == 0) and not self.stop:
-                    self.stop = True
+                if ((self.index + 2) % n == 0):
+                    if not self.stop:
+                        self.stop = True
+                    else:
+                        self.stop = False
                 
                 if self.transition:
                     self.transition = False
 
             # print("index =", self.index)
             # print("transition ?", self.transition)
+
+            if (self.index + 4)%n == 0:
+                self.unable_button.config(state=tk.DISABLED)
+
+            if self.index % n == 0:
+                self.unable_button.config(state=tk.NORMAL)
             
             idx1 = self.index
             idx2 = self.index + 1
             self.arg1_button.config(text=self._format_node_text(node1, self.graph.nodes[node1].get("text", node1)), command=lambda i=idx1, n=node1: [self.update_score(n, i), self.next_step(None)])
             self.arg2_button.config(text=self._format_node_text(node2, self.graph.nodes[node2].get("text", node2)), command=lambda i=idx2, n=node2: [self.update_score(n, i), self.next_step(None)])
-
+            
             self._set_button_colors(self.arg1_button, node1)
             self._set_button_colors(self.arg2_button, node2)
             
@@ -273,7 +282,7 @@ class DebateApp:
 
                     with open(path_to_db+'feedback_db.json', 'w') as f2:
                         json.dump(feedback_db, f2)
-                        
+    
     def _get_best_argument(self, candidates):
         return candidates[0] if candidates else None
 
@@ -349,6 +358,7 @@ class DebateApp:
         root.destroy()
         new_window = tk.Tk()
         new_window.title("Contexte de l'argument " + selected_option)
+        new_window.geometry("800x150")
 
         if selected_option == "1":
             node = self.order[self.index]
@@ -361,7 +371,8 @@ class DebateApp:
 
         label = tk.Label(new_window, 
                             text=text, 
-                            font=("Arial", 14))
+                            font=("Arial", 14),
+                            wraplength=750)
         
         label.pack(pady=10, fill="both", expand=True)
 
@@ -437,7 +448,9 @@ class DebateApp:
 
                 print("C =", self.graph.nodes[self.C].get("text", self.C))
                 print("D =", self.graph.nodes[self.D].get("text", self.D))
-                self.transition = True
+
+                if (self.A != None) and (self.B != None) and (self.C != None) and (self.D != None):
+                    self.transition = True
             
             if self.transition and self.stop and self.stop2:
                 self.compte = True
