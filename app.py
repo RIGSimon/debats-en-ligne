@@ -125,9 +125,11 @@ class DebateApp:
         self.D = None
         self.nb_transitions = round(len(self.order)*0.2,2)
         self.transition = False
-        self.transitions_infos = [0, 0] # nb transitions valides / nb transitions non valides 
+        self.transitions_infos = [0, 0] # Choix A / Choix C
+        self.transitions_results = [0, 0] # nb transitions valides / nb transitions non valides 
         self.compte = False
         self.stop = False
+        self.stop2 = False
 
         self.next_step(None)  # Afficher la première paire
     
@@ -206,13 +208,33 @@ class DebateApp:
 
         # Refresh current buttons
         if self.index >= 0 and (((len(self.order) % n == 0) and (self.index <= len(self.order))) or ((len(self.order) % n != 0) and (self.index < len(self.order)))):  
-            
+            print(self.transitions_infos)
+
             if ((self.index + 2) % n == 0) and self.transition and self.stop:
-                node1 = self.A
-                node2 = self.C
-                self.stop = False
+                if not self.stop2:
+                    print("TRANS1")
+                    node1 = self.A
+                    node2 = self.C
+                    self.stop2 = True
+                
+                else:
+                    print("TRANS2")
+                    if self.transitions_infos[0] == 1: # a choisi "A"
+                        node1 = self.A
+                        node2 = self.D
+
+                    if self.transitions_infos[1] == 1: # a choisi "C"
+                        node1 = self.C
+                        node2 = self.B
+                    
+                    # if self.transitions_infos == [0, 0]: # ne s'est pas decide
+
+                    self.stop = False
+                    self.stop2 = False
+                    self.transitions_infos = [0, 0] # réinitialisation
 
             else:
+                print("NOT")
                 node1 = self.order[self.index]
                 node2 = self.order[self.index+1]
                 # print("self.index = ",self.index, "text = ",self.graph.nodes[node1].get("text", node1), "\n")
@@ -360,14 +382,23 @@ class DebateApp:
 
     def ask_feedback(self, root):
         feedback_root = tk.Toplevel(root)
-        feedback_entry = tk.Text(feedback_root, width=100, height=2)
-        feedback_entry.pack(pady=5)
+        feedback_root.geometry("800x150")
+        feedback_root.title("Avis")
 
-        send_button = tk.Button(feedback_root, 
-                           text="Envoyer", 
-                           command=lambda:[self._refresh_display(feedback_entry.get("1.0", tk.END).strip()), self.destroy_windows(feedback_root, send_button)])
-        
-        send_button.pack(pady=10)
+        # Conteneur principal
+        main_frame = tk.Frame(feedback_root)
+        main_frame.pack(expand=True, fill="both", padx=10, pady=10)
+
+        # Champ de texte
+        feedback_entry = tk.Text(main_frame, wrap="word", height=4)
+        feedback_entry.pack(fill="both", expand=True)
+
+        # Bouton
+        send_button = tk.Button(main_frame,
+                                text="Envoyer",
+                                command=lambda: [self._refresh_display(feedback_entry.get("1.0", tk.END).strip()),
+                                                self.destroy_windows(feedback_root, send_button)])
+        send_button.pack(pady=5)
 
     def destroy_windows(self, root, button):
         root.destroy()
@@ -382,43 +413,58 @@ class DebateApp:
         n = ((len(self.order)//self.nb_transitions))*2 
         # print(self.index, chosen_node_index, n)
 
-        if (self.index + 4) % n == 0: # a 2 comp
-            self.A = self.order[chosen_node_index] 
+        if not self.is_tournoi:
+            if (((self.index + 4) % n == 0) and (self.A == None) and (self.B == None)): # a 2 comp
+                self.A = self.order[chosen_node_index] 
 
-            if (chosen_node_index == self.index): 
-                self.B = self.order[chosen_node_index+1]
-            
-            else: # on a choisi self.index+1
-                self.B = self.order[chosen_node_index-1]
-            
-            # print("A =", self.graph.nodes[self.A].get("text", self.A))
-            # print("B =", self.graph.nodes[self.B].get("text", self.B))
+                if (chosen_node_index == self.index): 
+                    self.B = self.order[chosen_node_index+1]
                 
-        if (self.index + 2) % n == 0: # a 1 comp
-            self.C = self.order[chosen_node_index] 
-
-            if chosen_node_index == self.index:
-                self.D = self.order[chosen_node_index+1]
+                else: # on a choisi self.index+1
+                    self.B = self.order[chosen_node_index-1]
                 
-            else:
-                self.D = self.order[chosen_node_index-1]
+                print("A =", self.graph.nodes[self.A].get("text", self.A))
+                print("B =", self.graph.nodes[self.B].get("text", self.B))
+                    
+            if (((self.index + 2) % n == 0) and (self.C == None) and (self.D == None)): # a 1 comp
+                self.C = self.order[chosen_node_index] 
 
-            # print("C =", self.graph.nodes[self.C].get("text", self.C))
-            # print("D =", self.graph.nodes[self.D].get("text", self.D))
-            self.transition = True
-        
-        if self.transition and not self.stop:
-            self.compte = True
+                if chosen_node_index == self.index:
+                    self.D = self.order[chosen_node_index+1]
+                    
+                else:
+                    self.D = self.order[chosen_node_index-1]
 
-        if self.compte :
-            if node == self.A:
-                self.transitions_infos[0] += 1
+                print("C =", self.graph.nodes[self.C].get("text", self.C))
+                print("D =", self.graph.nodes[self.D].get("text", self.D))
+                self.transition = True
             
-            if node == self.C:
-                self.transitions_infos[1] += 1
+            if self.transition and self.stop and self.stop2:
+                self.compte = True
 
-            self.compte = False
-            print("Infos Transitions - Cohérence :", self.transitions_infos)    
+            if self.compte :
+                if node == self.A:
+                    self.transitions_infos[0] += 1
+                
+                if node == self.C:
+                    self.transitions_infos[1] += 1
+
+                self.compte = False 
+                print("Infos Transitions :", self.transitions_infos)
+
+            if ((self.index + 2) % n == 0) and not self.stop and not self.stop2:
+                if (node == self.A) or (node == self.C):
+                    self.transitions_results[0] += 1
+                
+                else:
+                    self.transitions_results[1] += 1
+
+                print("Transitions - Cohérence :", self.transitions_results)
+                self.A = None
+                self.B = None
+                self.C = None
+                self.D = None
+
         
         if not self.transition: # le test de la transitivité ne doit pas impacter le score
             cur_node = node
@@ -478,7 +524,7 @@ class DebateApp:
             
             arg_button = tk.Button(self.root, 
                                 text="Analyse des résultats",  
-                                command=lambda: analyse_window(self.score, self.weighted_score, self.tab_score, self.pour, self.contre, self.transitions_infos, self.root, self.debate_graph.nodes[self.debate_graph.main_arg].get("text", self.debate_graph.main_arg), self.strategy, myUsername),
+                                command=lambda: analyse_window(self.score, self.weighted_score, self.tab_score, self.pour, self.contre, self.transitions_results, self.root, self.debate_graph.nodes[self.debate_graph.main_arg].get("text", self.debate_graph.main_arg), self.strategy, myUsername),
                                 wraplength=500, 
                                 justify="left")
             arg_button.pack(pady=5, expand=True)
@@ -486,7 +532,7 @@ class DebateApp:
         
         if choice == None:
 
-            if not self.stop:
+            if not self.stop and not self.stop2:
                 self.index += 2
             
             #print("refresh")
@@ -732,9 +778,9 @@ def launch_selection_window(filename, root):
         nb_arg = options[i]*2
         nb_transitions = round(nb_arg*0.2, 2)
         n = nb_arg//nb_transitions*2
-        nb_tot = options[i] + math.floor(nb_arg/n)
+        nb_tot = options[i] + math.floor(nb_arg/n)*2
         options[i] = nb_tot
-        options_ajout.append(math.floor(nb_arg/n))
+        options_ajout.append(math.floor(nb_arg/n)*2)
         # print(nb_transitions, nb_arg, n, nb_tot)
 
     selected_num_questions = tk.IntVar(selection_root)
@@ -846,6 +892,8 @@ def launch_register_window(root):
     repassword_entry.pack(pady=5)
     
     def validate_register(root):
+        global myUsername
+
         username = username_entry.get()
         password = password_entry.get()
         repassword = repassword_entry.get()
@@ -857,6 +905,8 @@ def launch_register_window(root):
                 log_dict[username] = password
                 with open(path_to_db+'user_db.json', 'w') as f2:
                     json.dump(log_dict, f2)
+                
+                myUsername = username
                 login_root.destroy()
                 root.destroy()
                 launch_main_window(None)
