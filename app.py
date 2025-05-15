@@ -2,6 +2,7 @@ import json
 import tkinter as tk
 from tkinter import filedialog, messagebox
 from graph import DebateGraph
+import networkx as nx
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import numpy as np
@@ -26,10 +27,14 @@ class DebateApp:
         self.username = None
 
         self.debate_graph = DebateGraph(filename, nb, strategy)
+        self.tab_pour = np.zeros(self.debate_graph.height())
+        self.tab_contre = np.zeros(self.debate_graph.height())
         self.tab_score = np.zeros(self.debate_graph.height()) #tableau de taille hauteur de l'arbre
+        self.tot_contre = np.zeros(self.debate_graph.height())
+        self.tot_pour = np.zeros(self.debate_graph.height())
         self.graph = self.debate_graph.G.copy()
         self.order = self.debate_graph.order.copy()
-        # print(self.order)
+        
         self.index = -2
 
         self.pour = 0
@@ -48,6 +53,17 @@ class DebateApp:
             # print(self.order)
             self.parents = self.order[1]
             self.order = self.order[0]
+        else:
+            parents = {child: parent for parent, child in nx.bfs_edges(self.graph, source=self.debate_graph.main_arg)}
+            for n in self.order:
+                lv = self.graph.nodes[n].get('level', '?')
+                if(int(self.graph.get_edge_data(parents[n], n)["relation"]) == -1):
+                    self.tot_contre[lv-1] += 1
+                if(int(self.graph.get_edge_data(parents[n], n)["relation"]) == 1):
+                    self.tot_pour[lv-1] += 1
+            print(self.tot_pour,self.tot_contre)
+            # print(self.order)
+            
         self.current_tournoi_index = 0
 
         menubar = tk.Menu(root)
@@ -331,28 +347,36 @@ class DebateApp:
     def choose_arg (self):
         new_window = tk.Tk()
         new_window.title("Contexte")
-
-        label = tk.Label(new_window, 
-                            text="Pour quel argument voulez-vous le contexte ?", 
-                            font=("Arial", 14))
         
-        label.pack(pady=10, fill="both", expand=True)
-
-        options = ["1", "2"]
-        selected_option = tk.StringVar(new_window)
-        selected_option.set(options[0])
-
-        option_menu = tk.OptionMenu(new_window, 
-                                    selected_option, 
-                                    *options)
-        option_menu.pack(pady=5)
-
-        send_button = tk.Button(new_window, 
-                           text="Envoyer", 
-                           command=lambda: self.launch_context_window(new_window, selected_option.get()))
-        
-        send_button.pack(pady=10)
-
+        if not self.is_tournoi:
+            label = tk.Label(new_window, 
+                                text="Pour quel argument voulez-vous le contexte ?", 
+                                font=("Arial", 14))
+            
+            label.pack(pady=10, fill="both", expand=True)
+    
+            options = ["1", "2"]
+            selected_option = tk.StringVar(new_window)
+            selected_option.set(options[0])
+    
+            option_menu = tk.OptionMenu(new_window, 
+                                        selected_option, 
+                                        *options)
+            option_menu.pack(pady=5)
+            send_button = tk.Button(new_window, 
+                               text="Envoyer", 
+                               command=lambda: self.launch_context_window(new_window, selected_option.get()))
+            
+            send_button.pack(pady=10)
+        else:
+            node1 = self.parents[0]
+            text = "tournois des fils de l'argument : \n"+self._format_node_text(node1, self.graph.nodes[node1].get("text", node1))
+            label = tk.Label(new_window, 
+                                text=text, 
+                                font=("Arial", 14),
+                                wraplength=750)
+            
+            label.pack(pady=10, fill="both", expand=True)
     
     def launch_context_window(self, root, selected_option):
         root.destroy()
@@ -479,7 +503,7 @@ class DebateApp:
                 self.D = None
 
         
-        if not self.transition: # le test de la transitivité ne doit pas impacter le score
+        if not self.transition or (self.transition and self.stop and not self.stop2): # le test de la transitivité ne doit pas impacter le score
             cur_node = node
             prev_node = list(self.graph.predecessors(cur_node))[0]
             buffer_score = 1
@@ -497,7 +521,10 @@ class DebateApp:
 
             else:
                 self.weighted_score +=  buffer_score / self.graph.nodes[node].get('level', '?') 
-                self.tab_score[self.graph.nodes[node].get('level', '?')-1] += buffer_score 
+                if(buffer_score==1):
+                    self.tab_pour[self.graph.nodes[node].get('level', '?')-1] += 1
+                if(buffer_score ==-1):
+                    self.tab_contre[self.graph.nodes[node].get('level', '?')-1] -= 1
                 if (buffer_score == 1):
                     self.pour += buffer_score / self.graph.nodes[node].get('level', '?')
 
@@ -535,9 +562,23 @@ class DebateApp:
             self.context_button.pack_forget()
             self.show_button.pack_forget()
             
+            self.tot_pour[self.tot_pour == 0] = 1
+            self.tot_contre[self.tot_contre == 0] = 1
+            TabPour = self.tab_pour/self.tot_pour
+            TabContr = self.tab_contre/self.tot_contre
+            meanTab = TabPour + TabContr
+            
+            #self.pour = self.pour/np.sum(self.tot_pour)
+            #self.contre = self.contre/np.sum(self.tot_contre)
+            n = len(meanTab)
+            w = np.linspace(1.0, 1.0/np.log(n), n)
+            self.pour = np.sum(TabPour*w)
+            self.contre = np.sum(np.abs(TabContr)*w)
+            print(meanTab, self.pour, self.contre)
+            
             arg_button = tk.Button(self.root, 
                                 text="Analyse des résultats",  
-                                command=lambda: analyse_window(self.score, self.weighted_score, self.tab_score, self.pour, self.contre, self.transitions_results, self.root, self.debate_graph.nodes[self.debate_graph.main_arg].get("text", self.debate_graph.main_arg), self.strategy, myUsername),
+                                command=lambda: analyse_window(self.score, self.weighted_score, meanTab[1:], self.pour, self.contre, self.transitions_results, self.root, self.debate_graph.nodes[self.debate_graph.main_arg].get("text", self.debate_graph.main_arg), self.strategy, myUsername),
                                 wraplength=500, 
                                 justify="left")
             arg_button.pack(pady=5, expand=True)
@@ -637,8 +678,20 @@ def analyse_window(score, weighted_score, tab_score, pour, contre, transitions_i
 
     button.place(x=10, y=10)
 
+
+    non_zero_indices = np.nonzero(tab_score)[0]
+    
+    if len(non_zero_indices) > 0:
+        last_non_zero = non_zero_indices[-1]
+        trimmed = tab_score[:last_non_zero + 1]
+    else:
+        trimmed = np.array([]) 
+    
+    tab_score = trimmed #we remove all zeros at the end
+    
+    print(trimmed)
     # print(score)
-    # print(weighted_score)
+    print(tab_score)
     save_user_score(username=username, strategy=strategy, score=tab_score.tolist())
     if weighted_score > 0:
         label = tk.Label(root, text="Vous êtes en faveur de l'argument : " + main_arg, height=5)
@@ -669,7 +722,7 @@ def analyse_window(score, weighted_score, tab_score, pour, contre, transitions_i
     canvas1.get_tk_widget().pack(side=tk.LEFT, padx=10)
 
     # --- Bar Chart for tab_score ---
-    levels = [f"Niveau {i+1}" for i in range(len(tab_score))]
+    levels = [f"{i+1}" for i in range(len(tab_score))]
     colors = ["green" if val > 0 else "red" if val < 0 else "gray" for val in tab_score]
 
     fig2, ax2 = plt.subplots()
@@ -677,8 +730,8 @@ def analyse_window(score, weighted_score, tab_score, pour, contre, transitions_i
     ax2.set_title("Opinion par niveau")
     ax2.set_xlabel("Niveaux")
     ax2.set_ylabel("Score pondéré")
-    min_val = min(0, np.min(tab_score))
-    max_val = max(0.01, np.max(tab_score))
+    min_val = np.min(tab_score)
+    max_val = np.max(tab_score)
     ax2.set_ylim(min_val * 1.2, max_val * 1.2)
 
     canvas2 = FigureCanvasTkAgg(fig2, master=figures_frame)
