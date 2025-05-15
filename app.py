@@ -92,7 +92,7 @@ class DebateApp:
                                 justify="left")
 
         self.unable_button = tk.Button(self.root, 
-                                    text="Je ne peux pas décider", 
+                                    text="Aucun des deux", 
                                     command=lambda: self.next_step(None), 
                                     width=40, 
                                     height=3)
@@ -571,7 +571,7 @@ class DebateApp:
             #self.pour = self.pour/np.sum(self.tot_pour)
             #self.contre = self.contre/np.sum(self.tot_contre)
             n = len(meanTab)
-            w = np.linspace(1.0, 1.0/np.log(n), n)
+            w = np.linspace(1.0, 1.0/np.exp(n), n)
             self.pour = np.sum(TabPour*w)
             self.contre = np.sum(np.abs(TabContr)*w)
             print(meanTab, self.pour, self.contre)
