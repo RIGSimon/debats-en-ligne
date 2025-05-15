@@ -65,11 +65,12 @@ df_weighted = pd.DataFrame(rows)
 fig, axes = plt.subplots(2, 2, figsize=(10, 6))
 axes = axes.flatten()
 
+mean_tot = []
 for i, (_, row) in enumerate(df_weighted.iterrows()):
     user = row['Utilisateur']
     values = [row[strat] for strat in strategies]
     mean_val = np.mean(values)
-
+    mean_tot.append(mean_val)
     ax = axes[i]
     ax.bar(strategies, values, color='skyblue')
     ax.axhline(mean_val, color='red', linestyle='--', label=f"Moyenne = {mean_val:.2f}")
@@ -79,6 +80,7 @@ for i, (_, row) in enumerate(df_weighted.iterrows()):
     ax.set_ylabel("Moyenne pondérée")
     ax.legend()
 
+print(np.mean(mean_tot))
 plt.suptitle("Moyennes pondérées par utilisateur et par stratégie", fontsize=14)
 plt.tight_layout(rect=[0, 0, 1, 0.95])
 plt.show()
