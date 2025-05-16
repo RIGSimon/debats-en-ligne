@@ -12,7 +12,11 @@ avis_utilisateurs = { #entrer les avis des utilisateurs restants
     "Aurelien": "pour",
     "iona": "pour",
     "simon": "pour",
-    "ms": "contre"
+    "ms": "contre",
+    "zahra":"pour",
+    "jules":"pour",
+    "cam":"pour",
+    "ys":"pour"
 }
 
 users = sorted({user for strat in data.values() for user in strat})
@@ -62,7 +66,7 @@ for user in users:
 df_weighted = pd.DataFrame(rows)
 
 # Création des subplots (2 lignes x 2 colonnes)
-fig, axes = plt.subplots(2, 2, figsize=(10, 6))
+fig, axes = plt.subplots(4, 2, figsize=(10, 6))
 axes = axes.flatten()
 
 mean_tot = []
